@@ -55,10 +55,10 @@ runs:
 
         # Write cert to temp file
         TEMP_CERT=$(mktemp)
-        echo '${{ inputs.dev-id-app-cert }}' | base64 --decode > "$TEMP_CERT"
+        echo '${{ inputs.dev-id-app-cert }}' | base64 -d > "$TEMP_CERT"
 
         # Import cert to our specific keychain
-        security import "$TEMP_CERT" -k "$KEYCHAIN_PATH" -P "${{ inputs.dev-id-app-password }}" -T /usr/bin/codesign
+        security import "$TEMP_CERT" -f pkcs12 -k "$KEYCHAIN_PATH" -P "${{ inputs.dev-id-app-password }}" -T /usr/bin/codesign
 
         # Add to keychain list (without changing default)
         security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | xargs)

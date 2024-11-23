@@ -11,12 +11,12 @@ defaults:
 
 jobs:
   test-no-cert:
-    name: No cert ${{ matrix.name }}
+    name: TEST inputs ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
-          - name: (hosted latest)
+          - name: (hosted)
             os: macos-latest
     steps:
       - name: Import Certificates (macOS)
@@ -36,13 +36,13 @@ jobs:
           echo "Test step failed as expected"
           fi
 
-  test-sign:
-    name: Creates keychain ${{ matrix.name }}
+  test-keychain:
+    name: TEST Keychain create ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
-          - name: GitHub macOS-latest
+          - name: hosted
             os: macos-latest
     steps:
       - name: Import Certificates (macOS)
@@ -60,3 +60,11 @@ jobs:
           else
             echo "Keychain created"
           fi
+  test-sign:
+    name: TEST Sign ${{ matrix.name }}
+        runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - name: hosted
+            os: macos-latest
