@@ -30,13 +30,13 @@ runs:
   using: 'composite'
   steps:
     - name: Check DEV_ID_APP_CERT
-      if: ${{ secrets.DEV_ID_APP_CERT == '' }}
+      if: inputs.dev-id-app-cert == ''
       run: |
         echo "::error::Missing required secret DEV_ID_APP_CERT"
         exit 1
 
     - name: Check DEV_ID_APP_PASSWORD
-      if: ${{ secrets.DEV_ID_APP_PASSWORD == '' }}
+      if: inputs.dev-id-app-password == ''
       run: |
         echo "::error::Missing required secret DEV_ID_APP_PASSWORD"
         exit 1
