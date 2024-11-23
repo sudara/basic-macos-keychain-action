@@ -25,6 +25,18 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    - name: Check DEV_ID_APP_CERT
+      if: ${{ secrets.DEV_ID_APP_CERT == '' }}
+      run: |
+        echo "::error::Missing required secret DEV_ID_APP_CERT"
+        exit 1
+
+    - name: Check DEV_ID_APP_PASSWORD
+      if: ${{ secrets.DEV_ID_APP_PASSWORD == '' }}
+      run: |
+        echo "::error::Missing required secret DEV_ID_APP_PASSWORD"
+        exit 1
+
     - id: import-cert
       shell: bash
       run: |
@@ -54,12 +66,14 @@ runs:
         # Set output for cleanup
         echo "keychain-path=$KEYCHAIN_PATH" >> $GITHUB_OUTPUT
 
-    - id: cleanup
-      if: always()
-      shell: bash
-      run: |
-        # Remove the keychain from the list
-        security list-keychains -d user -s $(security list-keychains -d user | grep -v "${{ steps.import-cert.outputs.keychain-path }}" | xargs)
+    # Needed until GA supports post-run steps in composite actions
+    # https://github.com/actions/runner/issues/1478
+    - name: Cleanup
+      uses: gacts/run-and-post-run@v1
+      with:
+        post: |
+          # Remove the keychain from the list
+          security list-keychains -d user -s $(security list-keychains -d user | grep -v "${{ steps.import-cert.outputs.keychain-path }}" | xargs)
 
-        # Delete the keychain
-        security delete-keychain "${{ steps.import-cert.outputs.keychain-path }}"
+          # Delete the keychain
+          security delete-keychain "${{ steps.import-cert.outputs.keychain-path }}"
