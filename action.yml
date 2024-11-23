@@ -22,23 +22,22 @@ outputs:
     description: 'Path to the created keychain'
     value: ${{ steps.import-cert.outputs.keychain-path }}
 
-defaults:
-  run:
-    shell: bash
 
 runs:
   using: 'composite'
   steps:
     - name: Check DEV_ID_APP_CERT
+      shell: bash
       if: inputs.dev-id-app-cert == ''
       run: |
-        echo "::error::Missing required secret DEV_ID_APP_CERT"
+        echo "::error::Missing required input 'dev-id-app-cert'"
         exit 1
 
     - name: Check DEV_ID_APP_PASSWORD
+      shell: bash
       if: inputs.dev-id-app-password == ''
       run: |
-        echo "::error::Missing required secret DEV_ID_APP_PASSWORD"
+        echo "::error::Missing required secret 'dev-id-app-password'"
         exit 1
 
     - id: import-cert
