@@ -11,7 +11,7 @@ defaults:
 
 jobs:
   test-no-cert:
-    name: ${{ matrix.name }}
+    name: No cert ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -34,4 +34,29 @@ jobs:
             exit 1
           else
           echo "Test step failed as expected"
+          fi
+
+  test-sign:
+    name: Creates keychain ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - name: GitHub macOS-latest
+            os: macos-latest
+    steps:
+      - name: Import Certificates (macOS)
+        uses: sudara/basic-macos-keychain-action@main
+        id: import
+        with:
+          dev-id-app-cert: ${{ secrets.DEV_ID_APP_CERT }}
+          dev-id-app-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
+
+      - name: Check keychain exists
+        run: |
+          if [ ! -f "${{ steps.import.outputs.keychain-path }}" ]; then
+            echo "::error::Keychain not created"
+            exit 1
+          else
+            echo "Keychain created"
           fi
