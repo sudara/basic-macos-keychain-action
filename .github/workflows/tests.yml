@@ -78,7 +78,7 @@ jobs:
         run: |
           TEMP_FILE=$(mktemp)
           touch $TEMP_FILE
-          codesign --sign "${{ secrets.DEVELOPER_ID_APPLICATION }}" hello.txt -v --deep --strict --options=runtime --timestamp
+          codesign --sign "${{ secrets.DEVELOPER_ID_APPLICATION }}" $TEMP_FILE -v --deep --strict --options=runtime --timestamp
           codesign --verify -v $TEMP_FILE
           if [ $? -ne 0 ]; then
             echo "Code signing verification failed"
