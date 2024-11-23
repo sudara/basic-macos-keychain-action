@@ -2,12 +2,12 @@ name: tests
 
 # IMPORTANT: To remain secure for self-hosted runners
 # We disallow `pull_request` here
-
 on:
   push:
 
-permissions:
-  contents: read
+defaults:
+  run:
+    shell: bash
 
 jobs:
   test-no-cert:
