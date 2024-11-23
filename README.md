@@ -1,4 +1,7 @@
-# basic-macos-keychain-action
+# Sudara's Basic macOS Keychain GitHub Action
+
+> [!WARNING]
+> DO NOT USE YET. IN DEVELOPMENT.
 
 A very basic keychain import action with the following features:
 
