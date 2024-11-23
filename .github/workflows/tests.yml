@@ -74,15 +74,12 @@ jobs:
           dev-id-app-cert: ${{ secrets.DEVELOPER_ID_APP_CERT }}
           dev-id-app-password: ${{ secrets.DEVELOPER_ID_APP_PASSWORD }}
 
-      - name: Sign a file
+      - name: Verify a signed file
         run: |
-          echo "Hello, world" > hello.txt
+          TEMP_FILE=$(mktemp)
+          touch $TEMP_FILE
           codesign --sign "${{ secrets.DEVELOPER_ID_APPLICATION }}" hello.txt -v --deep --strict --options=runtime --timestamp
-          echo "File signed"
-
-      - name: Verify code signing
-        run: |
-          codesign --verify -vv hello.txt
+          codesign --verify -v $TEMP_FILE
           if [ $? -ne 0 ]; then
             echo "Code signing verification failed"
             exit 1
