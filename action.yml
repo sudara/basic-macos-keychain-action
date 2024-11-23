@@ -22,6 +22,10 @@ outputs:
     description: 'Path to the created keychain'
     value: ${{ steps.import-cert.outputs.keychain-path }}
 
+defaults:
+  run:
+    shell: bash
+
 runs:
   using: 'composite'
   steps:
