@@ -1,0 +1,65 @@
+# action.yml
+name: 'Basic macOS Certificate Import'
+description: 'Safely imports certificates into a temporary keychain without modifying system defaults'
+author: 'sudara'
+branding:
+  icon: 'lock'
+  color: 'green'
+
+inputs:
+  dev-id-app-cert:
+    description: 'Base64-encoded PKCS12 file with the certificates'
+    required: true
+  dev-id-app-password:
+    description: 'Password for the PKCS12 file'
+    required: true
+  keychain-name:
+    description: 'Name for the temporary keychain'
+    default: github-action-${{ github.job }}-${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}
+
+outputs:
+  keychain-path:
+    description: 'Path to the created keychain'
+    value: ${{ steps.import-cert.outputs.keychain-path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: import-cert
+      shell: bash
+      run: |
+        # Set up keychain path
+        KEYCHAIN_PATH="$HOME/Library/Keychains/${{ inputs.keychain-name }}.keychain-db"
+        KEYCHAIN_PASSWORD="${{ inputs.keychain-name }}"
+
+        # Create new keychain (without making it default)
+        security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+        # Unlock it for use
+        security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+        # Write cert to temp file
+        TEMP_CERT=$(mktemp)
+        echo '${{ inputs.dev-id-app-cert }}' | base64 --decode > "$TEMP_CERT"
+
+        # Import cert to our specific keychain
+        security import "$TEMP_CERT" -k "$KEYCHAIN_PATH" -P "${{ inputs.dev-id-app-password }}" -T /usr/bin/codesign
+
+        # Add to keychain list (without changing default)
+        security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | xargs)
+
+        # Clean up temp file
+        rm "$TEMP_CERT"
+
+        # Set output for cleanup
+        echo "keychain-path=$KEYCHAIN_PATH" >> $GITHUB_OUTPUT
+
+    - id: cleanup
+      if: always()
+      shell: bash
+      run: |
+        # Remove the keychain from the list
+        security list-keychains -d user -s $(security list-keychains -d user | grep -v "${{ steps.import-cert.outputs.keychain-path }}" | xargs)
+
+        # Delete the keychain
+        security delete-keychain "${{ steps.import-cert.outputs.keychain-path }}"
