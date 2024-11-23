@@ -41,7 +41,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: hosted
+          - name: (hosted)
             os: macos-latest
     steps:
       - uses: sudara/basic-macos-keychain-action@main
@@ -65,7 +65,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: hosted
+          - name: (hosted)
             os: macos-latest
     steps:
       - uses: sudara/basic-macos-keychain-action@main
@@ -89,12 +89,12 @@ jobs:
           fi
 
   test-cleanup:
-    name: TEST Sign ${{ matrix.name }}
+    name: TEST Cleanup ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
-          - name: hosted
+          - name: (hosted)
             os: macos-latest
     steps:
       - uses: sudara/basic-macos-keychain-action@main
