@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: GitHub macOS-latest
+          - name: (hosted latest)
             os: macos-latest
     steps:
       - name: Import Certificates (macOS)
@@ -49,8 +49,8 @@ jobs:
         uses: sudara/basic-macos-keychain-action@main
         id: import
         with:
-          dev-id-app-cert: ${{ secrets.DEV_ID_APP_CERT }}
-          dev-id-app-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
+          dev-id-app-cert: ${{ secrets.DEVELOPER_ID_APP_CERT }}
+          dev-id-app-password: ${{ secrets.DEVELOPER_ID_APP_PASSWORD }}
 
       - name: Check keychain exists
         run: |

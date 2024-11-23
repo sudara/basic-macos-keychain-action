@@ -41,21 +41,24 @@ with:
 | --------------- | ---------------------------- |
 | `keychain-path` | Path to the created keychain |
 
-This path is later used for cleanup and can additionally be used to specify for signing.
+This path can specified for signing and is later used for cleanup.
 
 ## Motivation
 
-Pamplejuce has used [apple-actions/import-codesign-certs](https://github.com/Apple-Actions/import-codesign-certs) for the last years. It's served us well, but has a few issues:
+Pamplejuce has used [apple-actions/import-codesign-certs](https://github.com/Apple-Actions/import-codesign-certs) for the last years.
 
-- Is not well-maintained
-- It does not clean up after itself
-- It does not work well on self-hosted runners
-- It does not provide an output
-- Is "heavy weight" vs. an easy to understand composite action
+It's served us well, but I wanted something
+
+- Well-maintained
+- Tested
+- Cleans up after itself
+- Works well on self-hosted runners
+- Provides a named keychain output to use for signing
+- Is a lightweight and easy to understand composite action
 
 This actions solves the above.
 
-You could also include what you see in the yml in your own workflow manually. It's encapsulated here for ease of use, to avoid messy additional scripts or long yml files.
+You could also just include what you see in the yml in your own workflow manually. It's encapsulated here for ease of use, to avoid messy additional scripts or long yml files.
 
 ## Releasing
 
