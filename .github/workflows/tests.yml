@@ -23,8 +23,8 @@ jobs:
         id: import
         continue-on-error: true # assume fail, let us run the upcoming step
         with:
-          dev-id-app-cert: ${{ secrets.NON_EXISTENT_CERT }}
-          dev-id-app-password: ${{ secrets.NON_EXISTENT_CERT_PASSWORD }}
+          dev-id-app-cert: ""
+          dev-id-app-password: ""
 
       - name: Check an error occurs when empty secret provided
         run: |
@@ -77,7 +77,7 @@ jobs:
       - name: Sign a file
         run: |
           echo "Hello, world" > hello.txt
-          codesign --sign "${{ secrets.DEVELOPER_ID_APPLICATION }}" hello.txt
+          codesign --sign "${{ secrets.DEVELOPER_ID_APPLICATION }}" hello.txt -v --deep --strict --options=runtime --timestamp
           echo "File signed"
 
       - name: Verify code signing
@@ -87,3 +87,18 @@ jobs:
             echo "Code signing verification failed"
             exit 1
           fi
+
+  test-cleanup:
+    name: TEST Sign ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - name: hosted
+            os: macos-latest
+    steps:
+      - uses: sudara/basic-macos-keychain-action@main
+        id: import
+        with:
+          dev-id-app-cert: ${{ secrets.DEVELOPER_ID_APP_CERT }}
+          dev-id-app-password: ${{ secrets.DEVELOPER_ID_APP_PASSWORD }}
