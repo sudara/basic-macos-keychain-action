@@ -1,0 +1,39 @@
+name: tests
+
+# IMPORTANT: To remain secure for self-hosted runners
+# We disallow `pull_request` here
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  test-no-cert:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false # show all errors for each platform (vs. cancel jobs on error)
+      matrix:
+        include:
+          - name: GitHub macOS-latest
+            os: macos-latest
+    steps:
+      - name: Import Certificates (macOS)
+        uses: sudara/basic-macos-keychain-action@main
+        id: import
+        continue-on-error: true
+        with:
+          dev-id-app-cert: ${{ secrets.NON_EXISTENT_CERT }}
+          dev-id-app-password: ${{ secrets.NON_EXISTENT_CERT_PASSWORD }}
+
+      - name: Check result
+        run: |
+          if [ "${{ steps.import.outcome }}" == "success" ]; then
+            echo "::error::Test step succeeded but should have failed"
+            exit 1
+          else
+          echo "Test step failed as expected"
+          fi
