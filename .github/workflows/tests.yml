@@ -22,7 +22,7 @@ jobs:
       - name: Import Certificates (macOS)
         uses: sudara/basic-macos-keychain-action@main
         id: import
-        continue-on-error: true
+        continue-on-error: true # assume fail, let us run the upcoming step
         with:
           dev-id-app-cert: ${{ secrets.NON_EXISTENT_CERT }}
           dev-id-app-password: ${{ secrets.NON_EXISTENT_CERT_PASSWORD }}
@@ -60,11 +60,33 @@ jobs:
           else
             echo "Keychain created"
           fi
+
   test-sign:
     name: TEST Sign ${{ matrix.name }}
-        runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
           - name: hosted
             os: macos-latest
+    steps:
+      - name: Import Certificates (macOS)
+        uses: sudara/basic-macos-keychain-action@main
+        id: import
+        with:
+          dev-id-app-cert: ${{ secrets.DEVELOPER_ID_APP_CERT }}
+          dev-id-app-password: ${{ secrets.DEVELOPER_ID_APP_PASSWORD }}
+
+      - name: Sign a file
+        run: |
+          echo "Hello, world" > hello.txt
+          codesign --sign "${{ steps.import.outputs.keychain-path }}" hello.txt
+          echo "File signed"
+
+      - name: Verify code signing
+        run: |
+          codesign --verify -vv hello.txt
+          if [ $? -ne 0 ]; then
+            echo "Code signing verification failed"
+            exit 1
+          fi
