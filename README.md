@@ -84,7 +84,7 @@ In CI, we need to avoid the required user interaction but remain secure.
 
 ### Additional Considerations with self-hosted Runners
 
-Be warned: GitHub self-hosted runners run as your local user on your local machine.
+Be warned: GitHub self-hosted runners run as the your local user on your local machine.
 
 This GitHub action creates _temporary_ keychains, one keychain per job attempt.
 
@@ -95,7 +95,7 @@ I've made this as secure and clean as possible, but it's still worth noting.
 You can view your keychains in your user directory `~/Library/Keychain`. Ideally you should see never see evidence unless a job is running, in which case you would temporarily see a keychain present like so:
 
 ```
-
+/Users/runner/Library/Keychains/github-action-test-sign-11996557705-16-1.keychain-db
 ```
 
 ## Releasing

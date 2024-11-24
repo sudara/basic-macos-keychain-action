@@ -74,6 +74,19 @@ jobs:
           dev-id-app-cert: ${{ secrets.DEVELOPER_ID_APP_CERT }}
           dev-id-app-password: ${{ secrets.DEVELOPER_ID_APP_PASSWORD }}
 
+      - name: Verify an unsigned file
+        run: |
+          TEMP_FILE=$(mktemp)
+          touch $TEMP_FILE
+          codesign --verify -v $TEMP_FILE
+          if [ $? -eq 0 ]; then
+            echo "Code signing verification succeeded but should have failed"
+            exit 1
+          else
+            echo "Code signing verification failed as expected"
+          fi
+          rm $TEMP_FILE
+
       - name: Verify a signed file
         run: |
           TEMP_FILE=$(mktemp)
@@ -81,8 +94,10 @@ jobs:
           codesign --verify -v $TEMP_FILE
           if [ $? -ne 0 ]; then
             echo "Code signing verification failed"
+            rm $TEMP_FILE
             exit 1
           fi
+          rm $TEMP_FILE
 
   test-cleanup:
     name: TEST Cleanup ${{ matrix.name }}
