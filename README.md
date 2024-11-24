@@ -32,7 +32,7 @@ If this sounds confusing, please [read my blog article on macOS codesigning](htt
 
 Add to any GitHub workflow like so:
 
-```
+```yml
 - name: Import Certificates (macOS)
   uses: sudara/basic-macos-keychain-action@1.2.0
   id: keychain
@@ -43,13 +43,13 @@ Add to any GitHub workflow like so:
 
 On GitHub hosted runners, you can then sign a file like so:
 
-```
+```bash
 codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v "${{ env.ARTIFACT_PATH }}" --deep --strict --options=runtime --timestamp
 ```
 
 On self-hosted runners, you'll need to provide the `keychain-path` that this action outputs, to differentiate it from your local keychain:
 
-```
+```bash
 codesign --force --keychain ${{ steps.keychain.outputs.keychain-path }} -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v "${{ env.ARTIFACT_PATH }}" --deep --strict --options=runtime --timestamp
 ```
 
@@ -110,7 +110,7 @@ I've taken the following steps to help insulate when used on self-hosted runners
 ### Additional considerations with self-hosted runners
 
 > [!WARNING]
-> Remember GitHub self-hosted runners run as the your local user on your local machine.
+> Remember GitHub self-hosted runners run as your local user on your local machine.
 
 This GitHub action creates _temporary_ keychains (one keychain per job attempt).
 
@@ -119,23 +119,23 @@ In other words, when running on self-hosted runners, this action _will_ add and 
 You can view your keychains in your user directory `~/Library/Keychain`. You should never see evidence unless a job is running, in which case you would temporarily see a keychain present like so:
 
 ```
-/Users/<youruser>/Library/Keychains/github-action-test-sign-11996557705-16-1.keychain-db
+/Users/<youruser>/Library/Keychains/github-action-your-job-name-11996557705-16-1.keychain-db
 ```
+
+## Troubleshooting
 
 ### When your self-hosted runner is your local dev machine
 
-In this case, you'll certs probably already live in your local keychain.
+In this case, your certs probably already live in your local keychain.
 
 To avoid dreaded "ambiguous" errors when using `codesign`, be sure to always specify the keychain you want to use when codesigning:
 
-```
+```bash
 codesign --force --keychain ${{ steps.keychain.outputs.keychain-path }} # rest of command
 ```
 
 > [!NOTE]
-> You must provide an `id:` for the output to be accessible, see Usage
-
-## Troubleshooting
+> You must have provided an `id:` for the action (here it's `keychain`) to use the output, see Usage
 
 ### errSecInternalComponent
 
