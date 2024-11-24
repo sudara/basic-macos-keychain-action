@@ -82,36 +82,38 @@ jobs:
           dev-id-app-password: ${{ secrets.DEVELOPER_ID_APP_PASSWORD }}
 
       - name: Verify an unsigned file
+        id: unsigned
+        continue-on-error: true # we expect this to
         run: |
           TEMP_FILE=$(mktemp)
-          touch $TEMP_FILE
+          echo "temp_file=$TEMP_FILE" >> $GITHUB_OUTPUT
           codesign --verify -v $TEMP_FILE
-          if [ $? -eq 0 ]; then
-            echo "Code signing verification succeeded but should have failed"
-            rm $TEMP_FILE
+
+      - name: Verify unsigned
+        run: |
+          if [ "${{ steps.unsigned.outcome }}" == "success" ]; then
+            echo "::error::Test step succeeded but should have failed"
             exit 1
           else
-            echo "Code signing verification failed as expected"
-            rm $TEMP_FILE
-            exit 0
+          echo "Test step failed as expected"
           fi
 
       - name: Verify a signed file
         run: |
-          TEMP_FILE=$(mktemp)
-          codesign --force --sign "${{ secrets.DEVELOPER_ID_APPLICATION }}" $TEMP_FILE -v --deep --strict --options=runtime --timestamp
-          codesign --verify -v $TEMP_FILE
+          codesign --force --sign "${{ secrets.DEVELOPER_ID_APPLICATION }}" ${{ steps.unsigned.outputs.temp_file }} -v --deep --strict --options=runtime --timestamp
+          codesign --verify -v ${{ steps.unsigned.outputs.temp_file }}
           if [ $? -ne 0 ]; then
             echo "Code signing verification failed"
-            rm $TEMP_FILE
+            rm ${{ steps.unsigned.outputs.temp_file }}
             exit 1
           fi
-          rm $TEMP_FILE
+          rm ${{ steps.unsigned.outputs.temp_file }}
 
   test-cleanup:
     if: ${{ always() }}
     name: TEST Cleanup ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    needs: test-sign
     strategy:
       matrix:
         include:
