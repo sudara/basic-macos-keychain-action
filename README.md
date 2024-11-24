@@ -25,28 +25,52 @@ You could also just include what you see in the yml in your own workflow manuall
 
 ## Usage
 
-Use in your workflow by passing in 2 secrets.
+This assumes you have 3 secrets:
+
+1. `DEV_ID_APP_CERT`, the exported cert from Xcode which has then been base64-encoded.
+2. `DEV_ID_APP_PASSWORD`, the password you supplied to Xcode at the time of cert export.
+3. `DEVELOPER_ID_APPLICATION`, either the name or the hashed id of the specific cert identity, as found via `security find-identity -v -p codesigning`.
+
+If this sounds confusing, please [read my blog article on macOS codesigning](https://melatonin.dev/blog/how-to-code-sign-and-notarize-macos-audio-plugins-in-ci/):
+
+Add to any GitHub workflow like so:
 
 ```
-uses: sudara/basic-macos-keychain-action@v1
-with:
-  dev-id-app-cert: ${{ secrets.DEV_ID_APP_CERT }}
-  dev-id-app-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
+- name: Import Certificates (macOS)
+  uses: sudara/basic-macos-keychain-action@main
+  id: keychain
+  with:
+    dev-id-app-cert: ${{ secrets.DEV_ID_APP_CERT }}
+    dev-id-app-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
 ```
+
+On GitHub hosted runners, you can then sign a file like so:
+
+```
+codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v "${{ env.ARTIFACT_PATH }}" --deep --strict --options=runtime --timestamp
+```
+
+On self-hosted runners, you'll need to provide the `keychain-path` that this action outputs, to differentiate it from your local keychain:
+
+```
+codesign --force --keychain ${{ steps.keychain.outputs.keychain-path }} -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v "${{ env.ARTIFACT_PATH }}" --deep --strict --options=runtime --timestamp
+```
+
+> [!NOTE] > `id` must be present to make use of `steps.keychain.outputs.keychain-path` when signing
 
 ## Inputs
 
-| Input                 | Description                                      | Required | Default               |
-| --------------------- | ------------------------------------------------ | -------- | --------------------- |
-| `dev-id-app-cert`     | Base64-encoded PKCS12 file with the certificates | Yes      | -                     |
-| `dev-id-app-password` | Password for the PKCS12 file                     | Yes      | -                     |
-| `keychain-name`       | Name for the temporary keychain                  | No       | Uniquely generated ID |
+| Input                 | Description                                      | Required | Default       |
+| --------------------- | ------------------------------------------------ | -------- | ------------- |
+| `dev-id-app-cert`     | Base64-encoded PKCS12 file with the certificates | Yes      | -             |
+| `dev-id-app-password` | Password for the PKCS12 file                     | Yes      | -             |
+| `keychain-name`       | Name of the temporary keychain                   | No       | Unique job ID |
 
 ## Outputs
 
-| Output          | Description                  |
-| --------------- | ---------------------------- |
-| `keychain-path` | Path to the created keychain |
+| Output          | Description                                       |
+| --------------- | ------------------------------------------------- |
+| `keychain-path` | Path to the temporary keychain with imported cert |
 
 This path can specified for signing and is later used for cleanup.
 
@@ -86,7 +110,7 @@ I've taken the following steps to help insulate when used on self-hosted runners
 - The temporary keychain file is specific to the exact job run (multiple can exist in parallel).
 - The keychain is removed from the keychain list and deleted at the end of the job run.
 
-### Additional Considerations with self-hosted Runners
+### Additional considerations with self-hosted runners
 
 > [!WARNING]
 > Remember GitHub self-hosted runners run as the your local user on your local machine.
@@ -100,6 +124,19 @@ You can view your keychains in your user directory `~/Library/Keychain`. You sho
 ```
 /Users/<youruser>/Library/Keychains/github-action-test-sign-11996557705-16-1.keychain-db
 ```
+
+### When your self-hosted runner is your local dev machine
+
+In this case, you'll certs probably already live in your local keychain.
+
+To avoid dreaded "ambiguous" errors when using `codesign`, be sure to always specify the keychain you want to use when codesigning:
+
+```
+codesign --force --keychain ${{ steps.keychain.outputs.keychain-path }} # rest of command
+```
+
+> [!NOTE]
+> You must provide an `id:` for the output to be accessible, see Usage
 
 ## Releasing
 

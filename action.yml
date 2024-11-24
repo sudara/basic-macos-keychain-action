@@ -19,7 +19,7 @@ inputs:
 
 outputs:
   keychain-path:
-    description: 'Path to the created keychain'
+    description: 'Path to the temporary keychain with imported cert'
     value: ${{ steps.import-cert.outputs.keychain-path }}
 
 
