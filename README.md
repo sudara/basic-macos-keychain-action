@@ -7,19 +7,17 @@ This GitHub Action imports a DEVELOPER_ID_APPLICATION cert and password into tem
 
 [Pamplejuce](https://github.com/sudara/pamplejuce) used [apple-actions/import-codesign-certs](https://github.com/Apple-Actions/import-codesign-certs) the last several years.
 
-It's served us well, but had some problems on self-hosted runners.
+It's served us well, but had has a few issues which compound on self-hosted runners.
 
 In general I wanted something:
 
-- Well-maintained.
-- [Tested](https://github.com/sudara/basic-macos-keychain-action/blob/main/.github/workflows/tests.yml).
-- Cleans up after itself.
-- Works on self-hosted runners.
-- Won't retain or leak sensitive information.
-- Provides a named keychain output to use for signing.
-- Is a lightweight, [easy to understand composite action](https://github.com/sudara/basic-macos-keychain-action/blob/main/action.yml) (not js/ts).
-
-This actions solves the above.
+- ⚙️ Well-maintained.
+- ✅ [Tested](https://github.com/sudara/basic-macos-keychain-action/blob/main/.github/workflows/tests.yml).
+- 🧹Cleans up after itself.
+- 🖥️ Works on self-hosted runners.
+- 🔐 Won't retain or leak sensitive information.
+- 🤝 Provides a named keychain output to use for signing.
+- 🪶Is a lightweight, [easy to understand composite action](https://github.com/sudara/basic-macos-keychain-action/blob/main/action.yml) (not js/ts).
 
 You could also just include what you see in the yml in your own workflow manually. It's encapsulated here for ease of use, to avoid messy additional scripts or long yml files.
 
@@ -28,7 +26,7 @@ You could also just include what you see in the yml in your own workflow manuall
 Use in your workflow by passing in 2 secrets.
 
 ```
-uses: sudara/basic-macos-keychain-action
+uses: sudara/basic-macos-keychain-action@v1
 with:
   dev-id-app-cert: ${{ secrets.DEV_ID_APP_CERT }}
   dev-id-app-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
@@ -69,37 +67,41 @@ After the workflow run it:
 
 ### Avoiding user interaction
 
-Normally, running `codesign` will popup a prompt to have you auth against the keychain. Running `codesign` requires the keychain password
+Running `codesign` requires the keychain password. Normally, running `codesign` will therefore popup a prompt to auth against the keychain.
 
-In CI, we need to avoid the required user interaction but remain secure.
+In CI, we need to avoid the required user interaction (but remain secure). To accomplish this:
 
-- Only the `codesign` tool can access the keychain. We do _not_ use the `-A` flag when importing the cert via `security import `. We only specify `-T /usr/bin/codesign`.
+- Only the `codesign` tool can access the keychain. We specify `-T /usr/bin/codesign`.
+- We do _not_ use the `-A` flag when importing the cert via `security import `.
 - We use `security set-key-partition-list,` specifying the temporary keychain password, which lets us use the keychain passwordless, but _only_ with Apple's `codesign` tool.
 
-### Steps taken for security on self-hosted runners
+### Security on self-hosted runners
 
-- We create a real unique keychain password per job run.
-- The keychain file is specific to the exact job run (multiple can run in parallel)
+I've taken the following steps to help insulate when used on self-hosted runners.
+
+- It creates a unique keychain password per job run (vs. just reusing the keychain name).
 - The keychain password [is masked and unavailable in logs](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/workflow-commands-for-github-actions#masking-a-value-in-a-log).
+- The temporary keychain file is specific to the exact job run (multiple can exist in parallel).
 - The keychain is removed from the keychain list and deleted at the end of the job run.
 
 ### Additional Considerations with self-hosted Runners
 
-Be warned: GitHub self-hosted runners run as the your local user on your local machine.
+> [!WARNING]
+> Remember GitHub self-hosted runners run as the your local user on your local machine.
 
-This GitHub action creates _temporary_ keychains, one keychain per job attempt.
+This GitHub action creates _temporary_ keychains (one keychain per job attempt).
 
-In other words, when running on self-hosted runners, this action will add and remove a keychain on your local machine.
+In other words, when running on self-hosted runners, this action _will_ add and remove a keychain on your local machine.
 
-I've made this as secure and clean as possible, but it's still worth noting.
-
-You can view your keychains in your user directory `~/Library/Keychain`. Ideally you should see never see evidence unless a job is running, in which case you would temporarily see a keychain present like so:
+You can view your keychains in your user directory `~/Library/Keychain`. You should never see evidence unless a job is running, in which case you would temporarily see a keychain present like so:
 
 ```
-/Users/runner/Library/Keychains/github-action-test-sign-11996557705-16-1.keychain-db
+/Users/<youruser>/Library/Keychains/github-action-test-sign-11996557705-16-1.keychain-db
 ```
 
 ## Releasing
+
+Putting this here to remember :)
 
 ```
 git tag -a v1.0.0 -m "Releasing 1.0.0"
