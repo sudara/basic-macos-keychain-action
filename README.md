@@ -7,25 +7,25 @@ This GitHub Action imports a DEVELOPER_ID_APPLICATION cert and password into tem
 > [!WARNING]
 > DO NOT USE YET. IN DEVELOPMENT.
 
-[Pamplejuce](https://github.com/sudara/pamplejuce) used [apple-actions/import-codesign-certs](https://github.com/Apple-Actions/import-codesign-certs) the last several years.
+[Pamplejuce](https://github.com/sudara/pamplejuce) uses this action.
 
-It's served us well, but had has a few issues which compound on self-hosted runners.
+Before, it used [apple-actions/import-codesign-certs](https://github.com/Apple-Actions/import-codesign-certs). That served us well, but had has a few issues which compounded on self-hosted runners.
 
 In general I wanted something:
 
 - ⚙️ Well-maintained.
 - ✅ [Tested](https://github.com/sudara/basic-macos-keychain-action/blob/main/.github/workflows/tests.yml).
-- 🧹Cleans up after itself.
+- 🧹 Cleans up after itself.
 - 🖥️ Works on self-hosted runners.
 - 🔐 Won't retain or leak sensitive information.
 - 🤝 Provides a named keychain output to use for signing.
-- 🪶Is a lightweight, [easy to understand composite action](https://github.com/sudara/basic-macos-keychain-action/blob/main/action.yml) (not js/ts).
+- 🪶 Is a lightweight, [easy to understand composite action](https://github.com/sudara/basic-macos-keychain-action/blob/main/action.yml) (not js/ts).
 
-You could also just include what you see in the yml in your own workflow manually. It's encapsulated here for ease of use, to avoid messy additional scripts or long yml files.
+This action is very basic. You could just read the action.yml and stick it in your own workflow manually. It's encapsulated here for ease of use, for testing, and to avoid messy additional scripts.
 
 ## Usage
 
-This assumes you have 3 secrets:
+Using this action, you'll need 3 secrets:
 
 1. `DEV_ID_APP_CERT`, the exported cert from Xcode which has then been base64-encoded.
 2. `DEV_ID_APP_PASSWORD`, the password you supplied to Xcode at the time of cert export.
@@ -138,11 +138,17 @@ codesign --force --keychain ${{ steps.keychain.outputs.keychain-path }} # rest o
 > [!NOTE]
 > You must provide an `id:` for the output to be accessible, see Usage
 
-## Esoterica
+## Troubleshooting
 
 ### errSecInternalComponent
 
-This error means the keychain is locked.
+Unfortunately this can mean [many different things](https://forums.developer.apple.com/forums/thread/712005).
+
+Given that we've done all the complex setup for you, the most likely culprit is there's something wrong with your identity, cert or password.
+
+I would suggest re-adding the GitHub secrets and assuming there was some mistake made in that process.
+
+If you are still having problems, open an issue.
 
 ## Releasing
 
