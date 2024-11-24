@@ -11,13 +11,13 @@ It's served us well, but had some problems on self-hosted runners.
 
 In general I wanted something:
 
-- Well-maintained
-- Tested
-- Cleans up after itself
-- Works on self-hosted runners
-- Won't leak sensitive information when running self-hosted
-- Provides a named keychain output to use for signing
-- Is a lightweight and easy to understand composite action
+- Well-maintained.
+- [Tested](https://github.com/sudara/basic-macos-keychain-action/blob/main/.github/workflows/tests.yml).
+- Cleans up after itself.
+- Works on self-hosted runners.
+- Won't retain or leak sensitive information.
+- Provides a named keychain output to use for signing.
+- Is a lightweight, [easy to understand composite action](https://github.com/sudara/basic-macos-keychain-action/blob/main/action.yml) (not js/ts).
 
 This actions solves the above.
 
