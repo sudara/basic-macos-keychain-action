@@ -4,9 +4,6 @@
 
 This GitHub Action imports a DEVELOPER_ID_APPLICATION cert and password into temporary keychain for code signing.
 
-> [!WARNING]
-> DO NOT USE YET. IN DEVELOPMENT.
-
 [Pamplejuce](https://github.com/sudara/pamplejuce) uses this action.
 
 Before, it used [apple-actions/import-codesign-certs](https://github.com/Apple-Actions/import-codesign-certs). That served us well, but had has a few issues which compounded on self-hosted runners.
@@ -37,7 +34,7 @@ Add to any GitHub workflow like so:
 
 ```
 - name: Import Certificates (macOS)
-  uses: sudara/basic-macos-keychain-action@main
+  uses: sudara/basic-macos-keychain-action@1.2.0
   id: keychain
   with:
     dev-id-app-cert: ${{ secrets.DEV_ID_APP_CERT }}
