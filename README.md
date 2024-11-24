@@ -53,7 +53,8 @@ On self-hosted runners, you'll need to provide the `keychain-path` that this act
 codesign --force --keychain ${{ steps.keychain.outputs.keychain-path }} -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v "${{ env.ARTIFACT_PATH }}" --deep --strict --options=runtime --timestamp
 ```
 
-> [!NOTE] > `id` must be present to make use of `steps.keychain.outputs.keychain-path` when signing
+> [!NOTE]
+> The `id` must be present to make use of `steps.keychain.outputs.keychain-path` when signing
 
 ## Inputs
 
