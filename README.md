@@ -1,5 +1,7 @@
 # Sudara's Basic macOS Keychain GitHub Action
 
+[![](https://github.com/sudara/basic-macos-keychain-action/actions/workflows/tests.yml/badge.svg)](https://github.com/sudara/basic-macos-keychain-action/actions)
+
 This GitHub Action imports a DEVELOPER_ID_APPLICATION cert and password into temporary keychain for code signing.
 
 > [!WARNING]
