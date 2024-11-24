@@ -67,6 +67,9 @@ runs:
         # Add keychain to keychain list (without changing default)
         security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | xargs)
 
+        # Unlock the keychain for the session
+        security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
         # Clean up temp file
         rm "$TEMP_CERT"
 
