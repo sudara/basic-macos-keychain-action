@@ -18,6 +18,8 @@ jobs:
         include:
           - name: (hosted)
             os: macos-latest
+          - name: (self-hosted)
+            os: self-hosted
     steps:
       - uses: sudara/basic-macos-keychain-action@main
         id: import
@@ -43,6 +45,8 @@ jobs:
         include:
           - name: (hosted)
             os: macos-latest
+          - name: (self-hosted)
+            os: self-hosted
     steps:
       - uses: sudara/basic-macos-keychain-action@main
         id: import
@@ -74,6 +78,9 @@ jobs:
         include:
           - name: (hosted)
             os: macos-latest
+          - name: (self-hosted)
+            os: self-hosted
+
     steps:
       - uses: sudara/basic-macos-keychain-action@main
         id: import
@@ -119,6 +126,8 @@ jobs:
         include:
           - name: (hosted)
             os: macos-latest
+          - name: (self-hosted)
+            os: self-hosted
     steps:
       - name: Ensure no github-action* keychain exists
         run: |

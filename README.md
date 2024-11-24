@@ -138,6 +138,12 @@ codesign --force --keychain ${{ steps.keychain.outputs.keychain-path }} # rest o
 > [!NOTE]
 > You must provide an `id:` for the output to be accessible, see Usage
 
+## Esoterica
+
+### errSecInternalComponent
+
+This error means the keychain is locked.
+
 ## Releasing
 
 Putting this here to remember :)
