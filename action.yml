@@ -45,7 +45,8 @@ runs:
       run: |
         # Set up keychain path
         KEYCHAIN_PATH="$HOME/Library/Keychains/${{ inputs.keychain-name }}.keychain-db"
-        KEYCHAIN_PASSWORD="${{ inputs.keychain-name }}"
+        KEYCHAIN_PASSWORD="$(openssl rand -base64 12)"
+        echo "::add-mask::$KEYCHAIN_PASSWORD"
 
         # Create new keychain (without making it default)
         security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
@@ -60,7 +61,10 @@ runs:
         # Import cert to our specific keychain
         security import "$TEMP_CERT" -f pkcs12 -k "$KEYCHAIN_PATH" -P "${{ inputs.dev-id-app-password }}" -T /usr/bin/codesign
 
-        # Add to keychain list (without changing default)
+        # Ensures codesign will not need a password prompt for this particular keychain
+        security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+        # Add keychain to keychain list (without changing default)
         security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | xargs)
 
         # Clean up temp file
