@@ -79,6 +79,7 @@ In CI, we need to avoid the required user interaction but remain secure.
 ### Steps taken for security on self-hosted runners
 
 - We create a real unique keychain password per job run.
+- The keychain file is specific to the exact job run (multiple can run in parallel)
 - The keychain password [is masked and unavailable in logs](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/workflow-commands-for-github-actions#masking-a-value-in-a-log).
 - The keychain is removed from the keychain list and deleted at the end of the job run.
 

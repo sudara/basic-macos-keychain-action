@@ -50,7 +50,14 @@ jobs:
           dev-id-app-cert: ${{ secrets.DEVELOPER_ID_APP_CERT }}
           dev-id-app-password: ${{ secrets.DEVELOPER_ID_APP_PASSWORD }}
 
-      - name: Check keychain exists
+      - name: Check a github-action* keychain exists
+        run: |
+          if [ ! -e "$HOME/Library/Keychains/github-action"*.keychain-db ]; then
+           echo "::error:: No matching github-action* keychain files exist"
+           exit 1
+          fi
+
+      - name: Check the specific keychain exists
         run: |
           if [ ! -f "${{ steps.import.outputs.keychain-path }}" ]; then
             echo "::error::Keychain not created"
@@ -81,11 +88,13 @@ jobs:
           codesign --verify -v $TEMP_FILE
           if [ $? -eq 0 ]; then
             echo "Code signing verification succeeded but should have failed"
+            rm $TEMP_FILE
             exit 1
           else
             echo "Code signing verification failed as expected"
+            rm $TEMP_FILE
+            exit 0
           fi
-          rm $TEMP_FILE
 
       - name: Verify a signed file
         run: |
@@ -100,6 +109,7 @@ jobs:
           rm $TEMP_FILE
 
   test-cleanup:
+    if: ${{ always() }}
     name: TEST Cleanup ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -108,8 +118,9 @@ jobs:
           - name: (hosted)
             os: macos-latest
     steps:
-      - uses: sudara/basic-macos-keychain-action@main
-        id: import
-        with:
-          dev-id-app-cert: ${{ secrets.DEVELOPER_ID_APP_CERT }}
-          dev-id-app-password: ${{ secrets.DEVELOPER_ID_APP_PASSWORD }}
+      - name: Ensure no github-action* keychain exists
+        run: |
+          if [ -e "$HOME/Library/Keychains/github-action"*.keychain-db ]; then
+           echo "::error:: Matching github-action* keychain files present"
+           exit 1
+          fi
