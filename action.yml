@@ -59,7 +59,7 @@ runs:
         echo '${{ inputs.dev-id-app-cert }}' | base64 -d > "$TEMP_CERT"
 
         # Import cert to our specific keychain
-        security import "$TEMP_CERT" -f pkcs12 -k "$KEYCHAIN_PATH" -P "${{ inputs.dev-id-app-password }}" -T /usr/bin/codesign
+        security import "$TEMP_CERT" -f pkcs12 -k "$KEYCHAIN_PATH" -P "${{ inputs.dev-id-app-password }}" -T /usr/bin/codesign -T /usr/bin/security
 
         # Ensures codesign will not need a password prompt for this particular keychain
         security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
