@@ -26,7 +26,13 @@ Using this action, you'll need 3 secrets:
 
 1. `DEV_ID_APP_CERT`, the exported cert from Xcode which has then been base64-encoded.
 2. `DEV_ID_APP_PASSWORD`, the password you supplied to Xcode at the time of cert export.
-3. `DEVELOPER_ID_APPLICATION`, either the name or the hashed id of the specific cert identity, as found via `security find-identity -v -p codesigning`.
+3. `DEVELOPER_ID_APPLICATION`, the name or the hashed id of the specific cert identity, as found via `security find-identity -v`.
+
+If you also want to sign installers, you will need:
+
+4. `DEV_ID_INSTALLER_CERT`
+5. `DEV_ID_INSTALLER_PASSWORD`
+6. `DEVELOPER_ID_INSTALLER`
 
 If this sounds confusing, please [read my blog article on macOS codesigning](https://melatonin.dev/blog/how-to-code-sign-and-notarize-macos-audio-plugins-in-ci/):
 
@@ -39,12 +45,21 @@ Add to any GitHub workflow like so:
   with:
     dev-id-app-cert: ${{ secrets.DEV_ID_APP_CERT }}
     dev-id-app-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
+    dev-id-installer-cert: ${{ secrets.DEV_ID_INSTALLER_CERT }}
+    dev-id-installer-pass: ${{ secrets.DEV_ID_INSTALLER_PASS }}
 ```
 
-On GitHub hosted runners, you can then sign a file like so:
+On GitHub hosted runners, you would then sign an application or plugin just by referencing the identity:
 
 ```bash
 codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v "${{ env.ARTIFACT_PATH }}" --deep --strict --options=runtime --timestamp
+```
+
+And sign a pkg installer by referencing the installer identity:
+
+```bash
+  productbuild --synthesize --package "myTemporaryPkg" --distribution distribution.xml --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp
+
 ```
 
 On self-hosted runners, you'll need to provide the `keychain-path` that this action outputs, to differentiate it from your local keychain:
@@ -58,11 +73,13 @@ codesign --force --keychain ${{ steps.keychain.outputs.keychain-path }} -s "${{ 
 
 ## Inputs
 
-| Input                 | Description                                      | Required | Default       |
-| --------------------- | ------------------------------------------------ | -------- | ------------- |
-| `dev-id-app-cert`     | Base64-encoded PKCS12 file with the certificates | Yes      | -             |
-| `dev-id-app-password` | Password for the PKCS12 file                     | Yes      | -             |
-| `keychain-name`       | Name of the temporary keychain                   | No       | Unique job ID |
+| Input                       | Description                                        | Required | Default       |
+| --------------------------- | -------------------------------------------------- | -------- | ------------- |
+| `dev-id-app-cert`           | Base64-encoded PKCS12 file with the app cert       | Yes      | -             |
+| `dev-id-app-password`       | Password for the PKCS12 file                       | Yes      | -             |
+| `dev-id-installer-cert`     | Base64-encoded PKCS12 file with the installer cert | No       | -             |
+| `dev-id-installer-password` | Password for the PKCS12 file                       | No       | -             |
+| `keychain-name`             | Name of the temporary keychain                     | No       | Unique job ID |
 
 ## Outputs
 

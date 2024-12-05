@@ -46,7 +46,7 @@ runs:
         echo "::error::Missing required secret 'dev-id-app-password'"
         exit 1
 
-    - id: import-certs
+    - id: setup-keychain
       shell: bash
       run: |
         # Set up keychain path
@@ -60,16 +60,6 @@ runs:
         # Unlock it for use
         security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-        # Write certs to temp file
-        DEV_ID_APPLICATION=$(mktemp)
-        DEV_ID_INSTALLER=$(mktemp)
-        echo '${{ inputs.dev-id-app-cert }}' | base64 -d > "$DEV_ID_APPLICATION"
-        echo '${{ inputs.dev-id-installer-cert }}' | base64 -d > "$DEV_ID_INSTALLER"
-
-        # Import certs to our specific keychain
-        security import "$DEV_ID_APPLICATION" -f pkcs12 -k "$KEYCHAIN_PATH" -P "${{ inputs.dev-id-app-password }}" -T /usr/bin/codesign -T /usr/bin/security
-        security import "$DEV_ID_INSTALLER" -f pkcs12 -k "$KEYCHAIN_PATH" -P "${{ inputs.dev-id-installer-password }}" -T /usr/bin/codesign -T /usr/bin/security
-
         # Ensures codesign will not need a password prompt for this particular keychain
         security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
@@ -79,12 +69,35 @@ runs:
         # Unlock the keychain for the session
         security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-        # Clean up temp files
-        rm "$DEV_ID_APPLICATION"
-        rm "$DEV_ID_INSTALLER"
-
         # Set output for cleanup
         echo "keychain-path=$KEYCHAIN_PATH" >> $GITHUB_OUTPUT
+
+    - id: import-app-cert
+      shell: bash
+      run: |
+        # Write cert to temp file
+        DEV_ID_APPLICATION=$(mktemp)
+        echo '${{ inputs.dev-id-app-cert }}' | base64 -d > "$DEV_ID_APPLICATION"
+
+        # Import cert to our specific keychain
+        security import "$DEV_ID_APPLICATION" -f pkcs12 -k "$KEYCHAIN_PATH" -P "${{ inputs.dev-id-app-password }}" -T /usr/bin/codesign -T /usr/bin/security
+
+        # Clean up temp files
+        rm "$DEV_ID_APPLICATION"
+
+    - id: import-install-cert
+      if: inputs.dev-id-installer-cert != ''
+      shell: bash
+      run: |
+        # Write cert to temp file
+        DEV_ID_INSTALLER=$(mktemp)
+        echo '${{ inputs.dev-id-installer-cert }}' | base64 -d > "$DEV_ID_INSTALLER"
+
+        # Import cert to our specific keychain
+        security import "$DEV_ID_INSTALLER" -f pkcs12 -k "$KEYCHAIN_PATH" -P "${{ inputs.dev-id-installer-password }}" -T /usr/bin/codesign -T /usr/bin/security
+
+        # Clean up temp files
+        rm "$DEV_ID_INSTALLER"
 
     # Needed until GA supports post-run steps in composite actions
     # https://github.com/actions/runner/issues/1478
@@ -93,7 +106,7 @@ runs:
       with:
         post: |
           # Remove the keychain from the list
-          security list-keychains -d user -s $(security list-keychains -d user | grep -v "${{ steps.import-cert.outputs.keychain-path }}" | xargs)
+          security list-keychains -d user -s $(security list-keychains -d user | grep -v "${{ steps.setup-keychain.outputs.keychain-path }}" | xargs)
 
           # Delete the keychain
-          security delete-keychain "${{ steps.import-cert.outputs.keychain-path }}"
+          security delete-keychain "${{ steps.setup-keychain.outputs.keychain-path }}"
