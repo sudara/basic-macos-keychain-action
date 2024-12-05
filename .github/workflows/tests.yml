@@ -186,7 +186,7 @@ jobs:
       - name: Verify a signed file
         run: |
           mkdir temp
-          TEMP_FILE=${{runner.temp}}/temp/temp.txt
+          TEMP_FILE=temp/temp.txt
           echo "Hello World" > $TEMP_FILE
           pkgbuild --root temp --identifier com.example.test --install-location ${{ runner.temp }} --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp temp.pkg
           codesign --verify -v temp.pkg
