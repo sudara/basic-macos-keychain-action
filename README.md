@@ -46,7 +46,7 @@ Add to any GitHub workflow like so:
     dev-id-app-cert: ${{ secrets.DEV_ID_APP_CERT }}
     dev-id-app-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
     dev-id-installer-cert: ${{ secrets.DEV_ID_INSTALLER_CERT }}
-    dev-id-installer-pass: ${{ secrets.DEV_ID_INSTALLER_PASS }}
+    dev-id-installer-password: ${{ secrets.DEV_ID_INSTALLER_PASSWORD }}
 ```
 
 On GitHub hosted runners, you would then sign an application or plugin just by referencing the identity:

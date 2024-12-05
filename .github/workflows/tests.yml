@@ -38,7 +38,7 @@ jobs:
           fi
 
   test-wrong-password:
-    name: TEST inputs ${{ matrix.name }}
+    name: TEST wrong pass ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
