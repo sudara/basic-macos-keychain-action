@@ -54,7 +54,7 @@ jobs:
           dev-id-app-cert: ${{ secrets.DEVELOPER_ID_APP_CERT }}
           dev-id-app-password: ${{ secrets.DEVELOPER_ID_APP_PASSWORD }}
 
-      - name: Check a github-action* keychain exists
+      - name: Check a github-action keychain exists
         run: |
           if [ ! -e "$HOME/Library/Keychains/github-action"*.keychain-db ]; then
            echo "::error:: No matching github-action* keychain files exist"
