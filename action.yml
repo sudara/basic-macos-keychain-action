@@ -8,11 +8,17 @@ branding:
 
 inputs:
   dev-id-app-cert:
-    description: 'Base64-encoded PKCS12 file with the certificates'
+    description: 'Base64-encoded PKCS12 file with the Developer ID Application certificate'
     required: true
   dev-id-app-password:
-    description: 'Password for the PKCS12 file'
+    description: 'Password for the dev-id-app-cert PKCS12 file'
     required: true
+  dev-id-installer-cert:
+    description: 'Base64-encoded PKCS12 file with the Developer ID Installer certificate'
+    required: false
+  dev-id-installer-password:
+    description: 'Password for the dev-id-installer-cert PKCS12 file'
+    required: false
   keychain-name:
     description: 'Name for the temporary keychain'
     default: github-action-${{ github.job }}-${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}
@@ -40,7 +46,7 @@ runs:
         echo "::error::Missing required secret 'dev-id-app-password'"
         exit 1
 
-    - id: import-cert
+    - id: import-certs
       shell: bash
       run: |
         # Set up keychain path
@@ -54,12 +60,15 @@ runs:
         # Unlock it for use
         security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-        # Write cert to temp file
-        TEMP_CERT=$(mktemp)
-        echo '${{ inputs.dev-id-app-cert }}' | base64 -d > "$TEMP_CERT"
+        # Write certs to temp file
+        DEV_ID_APPLICATION=$(mktemp)
+        DEV_ID_INSTALLER=$(mktemp)
+        echo '${{ inputs.dev-id-app-cert }}' | base64 -d > "$DEV_ID_APPLICATION"
+        echo '${{ inputs.dev-id-installer-cert }}' | base64 -d > "$DEV_ID_INSTALLER"
 
-        # Import cert to our specific keychain
-        security import "$TEMP_CERT" -f pkcs12 -k "$KEYCHAIN_PATH" -P "${{ inputs.dev-id-app-password }}" -T /usr/bin/codesign -T /usr/bin/security
+        # Import certs to our specific keychain
+        security import "$DEV_ID_APPLICATION" -f pkcs12 -k "$KEYCHAIN_PATH" -P "${{ inputs.dev-id-app-password }}" -T /usr/bin/codesign -T /usr/bin/security
+        security import "$DEV_ID_INSTALLER" -f pkcs12 -k "$KEYCHAIN_PATH" -P "${{ inputs.dev-id-installer-password }}" -T /usr/bin/codesign -T /usr/bin/security
 
         # Ensures codesign will not need a password prompt for this particular keychain
         security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
@@ -70,8 +79,9 @@ runs:
         # Unlock the keychain for the session
         security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-        # Clean up temp file
-        rm "$TEMP_CERT"
+        # Clean up temp files
+        rm "$DEV_ID_APPLICATION"
+        rm "$DEV_ID_INSTALLER"
 
         # Set output for cleanup
         echo "keychain-path=$KEYCHAIN_PATH" >> $GITHUB_OUTPUT
