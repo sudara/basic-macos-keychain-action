@@ -37,6 +37,52 @@ jobs:
           echo "Test step failed as expected"
           fi
 
+  test-wrong-password:
+    name: TEST inputs ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - name: (hosted)
+            os: macos-latest
+          - name: (self-hosted)
+            os: self-hosted
+    steps:
+      - uses: sudara/basic-macos-keychain-action@main
+        id: import
+        continue-on-error: true # assume fail, let us run the upcoming step
+        with:
+          dev-id-app-cert: ${{ secrets.DEVELOPER_ID_APP_CERT }}
+          dev-id-app-password: "wrong-password"
+
+      - name: Check an error occurs when wrong password provided
+        run: |
+          if [ "${{ steps.import.outcome }}" == "success" ]; then
+            echo "::error::Test step succeeded but should have failed"
+            exit 1
+          else
+          echo "Test step failed as expected"
+          fi
+
+  test-cleanup-after-fail:
+    name: TEST post-fail cleanup ${{ matrix.name }}
+    needs: [test-wrong-password]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - name: (hosted)
+            os: macos-latest
+          - name: (self-hosted)
+            os: self-hosted
+    steps:
+      - name: Ensure no github-action* keychain exists
+        run: |
+          if [ -e "$HOME/Library/Keychains/github-action"*.keychain-db ]; then
+           echo "::error:: Matching github-action* keychain files present"
+           exit 1
+          fi
+
   test-keychain:
     name: TEST Keychain create ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -116,9 +162,9 @@ jobs:
           fi
           rm ${{ steps.unsigned.outputs.temp_file }}
 
-  test-cleanup:
+  test-cleanup-after-sign:
     if: ${{ always() }}
-    name: TEST Cleanup ${{ matrix.name }}
+    name: TEST post-sign cleanup ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     needs: test-sign
     strategy:
