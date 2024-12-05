@@ -40,13 +40,21 @@ Add to any GitHub workflow like so:
 
 ```yml
 - name: Import Certificates (macOS)
-  uses: sudara/basic-macos-keychain-action@1.2.0
+  uses: sudara/basic-macos-keychain-action@v1
   id: keychain
   with:
     dev-id-app-cert: ${{ secrets.DEV_ID_APP_CERT }}
     dev-id-app-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
     dev-id-installer-cert: ${{ secrets.DEV_ID_INSTALLER_CERT }}
     dev-id-installer-password: ${{ secrets.DEV_ID_INSTALLER_PASSWORD }}
+```
+
+Since the convention on GitHub is that `@v1` is actually moving target, you might want lock to an exact version (understandable).
+
+Pick the latest tag, for example:
+
+```
+  uses: sudara/basic-macos-keychain-action@v1.3.0
 ```
 
 On GitHub hosted runners, you would then sign an application or plugin just by referencing the identity:
@@ -62,7 +70,7 @@ And sign a pkg installer by referencing the installer identity:
 
 ```
 
-On self-hosted runners, you'll need to provide the `keychain-path` that this action outputs, to differentiate it from your local keychain:
+On self-hosted runners, you may want to to provide the `keychain-path` that this action outputs when signing. This will differentiate it from the local keychains:
 
 ```bash
 codesign --force --keychain ${{ steps.keychain.outputs.keychain-path }} -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v "${{ env.ARTIFACT_PATH }}" --deep --strict --options=runtime --timestamp
@@ -170,6 +178,10 @@ If you are still having problems, open an issue.
 Putting this here to remember :)
 
 ```
-git tag -a v1.0.0 -m "Releasing 1.0.0"
+git tag -a v1.4.0 -m "Releasing 1.4.0"
 git push origin main --tags
+
+# Update the @v1
+git tag -f v1 v1.3.0
+git push -f origin v1
 ```

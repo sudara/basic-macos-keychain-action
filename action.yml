@@ -1,6 +1,6 @@
 # action.yml
 name: 'Basic macOS Certificate Import'
-description: 'Safely imports certificates into a temporary keychain without modifying system defaults'
+description: 'Safely imports code/pkg signing certs into a temp keychain. Well tested, transparent, cleans up after itself.'
 author: 'sudara'
 branding:
   icon: 'lock'
