@@ -162,6 +162,54 @@ jobs:
           fi
           rm ${{ steps.unsigned.outputs.temp_file }}
 
+  test-installer-sign:
+    name: TEST Installer Sign ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - name: (hosted)
+            os: macos-latest
+          - name: (self-hosted)
+            os: self-hosted
+
+    steps:
+      - uses: sudara/basic-macos-keychain-action@main
+        id: import
+        with:
+          dev-id-app-cert: ${{ secrets.DEVELOPER_ID_APP_CERT }}
+          dev-id-app-password: ${{ secrets.DEVELOPER_ID_APP_PASSWORD }}
+          dev-id-installer-cert: ${{ secrets.DEV_ID_INSTALLER_CERT }}
+          dev-id-installer-password: ${{ secrets.DEV_ID_INSTALLER_PASSWORD }}
+
+      - name: Verify an unsigned file
+        id: unsigned
+        continue-on-error: true # we expect this to
+        run: |
+          TEMP_FILE=$(mktemp)
+          echo "temp_file=$TEMP_FILE" >> $GITHUB_OUTPUT
+          codesign --verify -v $TEMP_FILE
+
+      - name: Verify unsigned
+        run: |
+          if [ "${{ steps.unsigned.outcome }}" == "success" ]; then
+            echo "::error::Test step succeeded but should have failed"
+            exit 1
+          else
+          echo "Test step failed as expected"
+          fi
+
+      - name: Verify a signed file
+        run: |
+          codesign --force --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" ${{ steps.unsigned.outputs.temp_file }} -v --deep --strict --options=runtime --timestamp
+          codesign --verify -v ${{ steps.unsigned.outputs.temp_file }}
+          if [ $? -ne 0 ]; then
+            echo "Code signing verification failed"
+            rm ${{ steps.unsigned.outputs.temp_file }}
+            exit 1
+          fi
+          rm ${{ steps.unsigned.outputs.temp_file }}
+
   test-cleanup-after-sign:
     if: ${{ always() }}
     name: TEST post-sign cleanup ${{ matrix.name }}
