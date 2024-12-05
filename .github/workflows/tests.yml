@@ -189,7 +189,7 @@ jobs:
           TEMP_FILE=$(mktemp temp/XXXXXX)
           echo "Hello World" > $TEMP_FILE
           pkgbuild --root temp --identifier com.example.test --install-location ${{ runner.temp }} --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp temp.pkg
-          codesign --verify -v temp.pkg
+          pkgutil --check-signature temp.pkg
           if [ $? -ne 0 ]; then
             echo "Code signing verification failed"
             rm $TEMP_FILE
