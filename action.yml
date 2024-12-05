@@ -60,17 +60,9 @@ runs:
         # Unlock it for use
         security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
-        # Ensures codesign will not need a password prompt for this particular keychain
-        security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-
-        # Add keychain to keychain list (without changing default)
-        security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | xargs)
-
-        # Unlock the keychain for the session
-        security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-
         # Set output for cleanup
         echo "keychain-path=$KEYCHAIN_PATH" >> $GITHUB_OUTPUT
+        echo "keychain-password=$KEYCHAIN_PASSWORD" >> $GITHUB_OUTPUT
 
     - id: import-app-cert
       shell: bash
@@ -98,6 +90,15 @@ runs:
 
         # Clean up temp files
         rm "$DEV_ID_INSTALLER"
+
+    - id: enable-keychain
+      shell: bash
+      run: |
+        # Ensures codesign will not need a password prompt for this particular keychain
+        security set-key-partition-list -S apple-tool:,apple: -s -k "${{ steps.setup-keychain.outputs.keychain-password }}" "${{ steps.setup-keychain.outputs.keychain-path }}"
+
+        # Add keychain to keychain list (without changing default)
+        security list-keychains -d user -s "${{ steps.setup-keychain.outputs.keychain-path }}" $(security list-keychains -d user | xargs)
 
     # Needed until GA supports post-run steps in composite actions
     # https://github.com/actions/runner/issues/1478
