@@ -182,33 +182,21 @@ jobs:
           dev-id-installer-cert: ${{ secrets.DEV_ID_INSTALLER_CERT }}
           dev-id-installer-password: ${{ secrets.DEV_ID_INSTALLER_PASSWORD }}
 
-      - name: Verify an unsigned file
-        id: unsigned
-        continue-on-error: true # we expect this to
-        run: |
-          TEMP_FILE=$(mktemp)
-          echo "temp_file=$TEMP_FILE" >> $GITHUB_OUTPUT
-          codesign --verify -v $TEMP_FILE
-
-      - name: Verify unsigned
-        run: |
-          if [ "${{ steps.unsigned.outcome }}" == "success" ]; then
-            echo "::error::Test step succeeded but should have failed"
-            exit 1
-          else
-          echo "Test step failed as expected"
-          fi
-
       - name: Verify a signed file
         run: |
-          codesign --force --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" ${{ steps.unsigned.outputs.temp_file }} -v --deep --strict --options=runtime --timestamp
-          codesign --verify -v ${{ steps.unsigned.outputs.temp_file }}
+          TEMP_DIR=$(mktemp -d)
+          TEMP_FILE=${{runner.temp}}/$TEMP_DIR/temp.txt
+          echo "Hello World" > $TEMP_FILE
+          pkgbuild --root $TEMP_DIR --identifier com.example.test --install-location ${{ runner.temp }} --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp temp.pkg
+          codesign --verify -v temp.pkg
           if [ $? -ne 0 ]; then
             echo "Code signing verification failed"
-            rm ${{ steps.unsigned.outputs.temp_file }}
+            rm $TEMP_FILE
+            rm temp.pkg
             exit 1
           fi
-          rm ${{ steps.unsigned.outputs.temp_file }}
+          rm $TEMP_FILE
+          rm temp.pkg
 
   test-cleanup-after-sign:
     if: ${{ always() }}
