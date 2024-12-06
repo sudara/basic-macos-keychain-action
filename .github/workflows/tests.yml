@@ -183,21 +183,26 @@ jobs:
           dev-id-installer-password: ${{ secrets.DEV_ID_INSTALLER_PASSWORD }}
 
       # this will all be run in runner.temp and cleaned up afterwards
-      - name: Verify a signed file
+      - name: Verify a signed pkg with pkgbuild
         run: |
           mkdir -p temp
           TEMP_FILE=$(mktemp temp/XXXXXX)
           echo "Hello World" > $TEMP_FILE
           pkgbuild --root temp --identifier com.example.test --install-location ${{ runner.temp }} --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp temp.pkg
           pkgutil --check-signature temp.pkg
-          if [ $? -ne 0 ]; then
-            echo "Code signing verification failed"
-            rm $TEMP_FILE
-            rm temp.pkg
-            exit 1
-          fi
-          rm $TEMP_FILE
+
+      - name: Verify signed pkg with productbuild
+        run: |
+          mkdir -p temp
+          TEMP_FILE=$(mktemp temp/XXXXXX)
+          echo "Hello World" > $TEMP_FILE
+          productbuild --synthesize --package temp.pkg --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp temp-product.pkg
+          pkgutil --check-signature temp.pkg
+
+      - cleanup:
+        run: |
           rm temp.pkg
+          rm temp-product.pkg
 
   test-cleanup-after-sign:
     if: ${{ always() }}
