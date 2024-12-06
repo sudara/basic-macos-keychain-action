@@ -199,7 +199,7 @@ jobs:
           productbuild --synthesize --package temp.pkg --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp temp-product.pkg
           pkgutil --check-signature temp.pkg
 
-      - cleanup:
+      - name: Cleanup
         run: |
           rm temp.pkg
           rm temp-product.pkg
