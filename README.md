@@ -2,11 +2,11 @@
 
 [![](https://github.com/sudara/basic-macos-keychain-action/actions/workflows/tests.yml/badge.svg)](https://github.com/sudara/basic-macos-keychain-action/actions)
 
-This GitHub Action imports certs and passwords into temporary keychain for macOS code signing.
+This action imports certs and their passwords into a temporary keychain for macOS code signing during a GitHub Actions workflow run.
 
-[Pamplejuce](https://github.com/sudara/pamplejuce) uses this action.
+[Pamplejuce](https://github.com/sudara/pamplejuce) is transitioning to use this action.
 
-Before, I used [apple-actions/import-codesign-certs](https://github.com/Apple-Actions/import-codesign-certs). That served us well, but had has a few issues which compounded on self-hosted runners.
+Before, I used [apple-actions/import-codesign-certs](https://github.com/Apple-Actions/import-codesign-certs). That served us well, but had a few issues which compounded when I personally moved to using self-hosted runners.
 
 I wanted something:
 
@@ -19,7 +19,7 @@ I wanted something:
 - 🧑🏼‍💻 Handles both binary signing (`DEVELOPER_ID_APPLICATION`) and pkg signing (`DEVELOPER ID INSTALLER`).
 - 🪶 Is a lightweight and [easy to understand composite action](https://github.com/sudara/basic-macos-keychain-action/blob/main/action.yml) (not js/ts).
 
-This action is very straightforward. A list of commands. You could just read the action.yml and stick it in your own workflow manually. It's encapsulated here for ease of use, for testing, and to avoid messy additional scripts.
+This action is very straightforward. Just a list of commands. Instead of consuming the action, you could also read the action.yml and stick it in your own workflow manually. It's encapsulated for ease of use, for testing, and to avoid messy scripts cluttering up my yaml.
 
 ## Usage
 
@@ -51,7 +51,7 @@ Add to any GitHub workflow like so:
 ```
 
 > [!NOTE]
-> The GitHub Action is that `@v1` refers to a moving target, so you might prefer to lock to an exact tag like `@v1.4.0`.
+> If you use `@v1`, be aware that it refers to a moving target. You might prefer to lock to an exact tag like `@v1.4.0`.
 
 
 After running this action, you can now sign an application / plugin just by referencing the `DEVELOPER_ID_APPLICATION` identity:
