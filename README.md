@@ -16,10 +16,10 @@ I wanted something:
 - 🖥️ Works on self-hosted runners.
 - 🔐 Won't retain or leak sensitive information.
 - 🤝 Provides a named keychain output to optionally specify for signing.
-- 🧑🏼‍💻 Handles both binary signing (`DEVELOPER_ID_APPLICATION`) and pkg signing (`DEVELOPER ID INSTALLER`).
-- 🪶 Is a lightweight and [easy to understand composite action](https://github.com/sudara/basic-macos-keychain-action/blob/main/action.yml) (not js/ts).
+- 🧑🏼‍💻 Handles both binary signing (`DEVELOPER_ID_APPLICATION`) and pkg signing (`DEVELOPER_ID_INSTALLER`).
+- 🪶 Is a lightweight and [easy to understand composite action](https://github.com/sudara/basic-macos-keychain-action/blob/main/action.yml) (not js or ts).
 
-This action is very straightforward. Just a list of commands. Instead of consuming the action, you could also read the action.yml and stick it in your own workflow manually. It's encapsulated for ease of use, for testing, and to avoid messy scripts cluttering up my yaml.
+This action very straightforward. Just a list of commands. Instead of consuming the action, you could also [copy the commands out of action.yml](https://github.com/sudara/basic-macos-keychain-action/blob/main/action.yml#L49-L101) and stick it in your own workflow manually. It's encapsulated for ease of use, for testing, and to avoid messy scripts cluttering up my yaml.
 
 ## Usage
 
