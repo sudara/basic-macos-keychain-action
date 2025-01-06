@@ -86,7 +86,7 @@ runs:
         echo '${{ inputs.dev-id-installer-cert }}' | base64 -d > "$DEV_ID_INSTALLER"
 
         # Import cert to our specific keychain
-        security import "$DEV_ID_INSTALLER" -f pkcs12 -k "${{ steps.setup-keychain.outputs.keychain-path }}" -P "${{ inputs.dev-id-installer-password }}" -T /usr/bin/pkgbuild -T /usr/bin/security -T /usr/bin/productbuild
+        security import "$DEV_ID_INSTALLER" -f pkcs12 -k "${{ steps.setup-keychain.outputs.keychain-path }}" -P "${{ inputs.dev-id-installer-password }}" -T /usr/bin/pkgbuild -T /usr/bin/security -T /usr/bin/productbuild -T /usr/bin/productsign
 
         # Clean up temp files
         rm "$DEV_ID_INSTALLER"
