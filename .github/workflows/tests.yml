@@ -18,8 +18,8 @@ jobs:
         include:
           - name: (hosted)
             os: macos-latest
-          - name: (self-hosted)
-            os: self-hosted
+          # - name: (self-hosted)
+          #   os: self-hosted
     steps:
       - uses: sudara/basic-macos-keychain-action@main
         id: import
