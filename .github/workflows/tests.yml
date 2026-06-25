@@ -206,12 +206,12 @@ jobs:
           KC="$HOME/Library/Keychains/ambiguity-test.keychain-db"
           ORIG_LIST="$(security list-keychains -d user | xargs)"
 
-          # Restore machine state even if an assertion aborts the step (set -e)
+          # Restore the search list and keychain even if an assertion aborts the step (set -e).
+          # The runner is ephemeral, so the trusted roots we plant below need no removal (and
+          # remove-trusted-cert can hang on an interactive auth prompt in CI).
           cleanup() {
             security list-keychains -d user -s $ORIG_LIST || true
             security delete-keychain "$KC" 2>/dev/null || true
-            sudo security remove-trusted-cert -d "$WORK/cA.pem" 2>/dev/null || true
-            sudo security remove-trusted-cert -d "$WORK/cB.pem" 2>/dev/null || true
           }
           trap cleanup EXIT
 
