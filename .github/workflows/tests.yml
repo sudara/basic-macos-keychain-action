@@ -1,21 +1,12 @@
 name: tests
 
-# IMPORTANT: To remain secure for self-hosted runners
-# We disallow `pull_request` here
 on:
   push:
 
 jobs:
   test-no-cert:
-    name: TEST inputs ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - name: (hosted)
-            os: macos-latest
-          - name: (self-hosted)
-            os: self-hosted
+    name: TEST inputs
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
       - uses: ./
@@ -35,15 +26,8 @@ jobs:
           fi
 
   test-wrong-password:
-    name: TEST wrong pass ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - name: (hosted)
-            os: macos-latest
-          - name: (self-hosted)
-            os: self-hosted
+    name: TEST wrong pass
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
       - uses: ./
@@ -63,16 +47,9 @@ jobs:
           fi
 
   test-cleanup-after-fail:
-    name: TEST post-fail cleanup ${{ matrix.name }}
+    name: TEST post-fail cleanup
     needs: [test-wrong-password]
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - name: (hosted)
-            os: macos-latest
-          - name: (self-hosted)
-            os: self-hosted
+    runs-on: macos-latest
     steps:
       - name: Ensure no github-action* keychain exists
         run: |
@@ -82,15 +59,8 @@ jobs:
           fi
 
   test-keychain:
-    name: TEST Keychain create ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - name: (hosted)
-            os: macos-latest
-          - name: (self-hosted)
-            os: self-hosted
+    name: TEST Keychain create
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
       - uses: ./
@@ -116,16 +86,8 @@ jobs:
           fi
 
   test-sign:
-    name: TEST Sign ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - name: (hosted)
-            os: macos-latest
-          - name: (self-hosted)
-            os: self-hosted
-
+    name: TEST Sign
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
       - uses: ./
@@ -182,16 +144,8 @@ jobs:
           rm $TEMP_FILE
 
   test-installer-sign:
-    name: TEST Installer Sign ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - name: (hosted)
-            os: macos-latest
-          - name: (self-hosted)
-            os: self-hosted
-
+    name: TEST Installer Sign
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
       - uses: ./
@@ -242,16 +196,9 @@ jobs:
 
   test-cleanup-after-sign:
     if: ${{ always() }}
-    name: TEST post-sign cleanup ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
+    name: TEST post-sign cleanup
+    runs-on: macos-latest
     needs: test-sign
-    strategy:
-      matrix:
-        include:
-          - name: (hosted)
-            os: macos-latest
-          - name: (self-hosted)
-            os: self-hosted
     steps:
       - name: Ensure no github-action* keychain exists
         run: |
