@@ -2,39 +2,40 @@
 
 [![](https://github.com/sudara/basic-macos-keychain-action/actions/workflows/tests.yml/badge.svg)](https://github.com/sudara/basic-macos-keychain-action/actions)
 
-This GitHub Action imports a DEVELOPER_ID_APPLICATION cert and password into temporary keychain for code signing.
+This action imports certs and their passwords into a temporary keychain for macOS code signing during a GitHub Actions workflow run.
 
-[Pamplejuce](https://github.com/sudara/pamplejuce) uses this action.
+[Pamplejuce](https://github.com/sudara/pamplejuce) is transitioning to use this action.
 
-Before, it used [apple-actions/import-codesign-certs](https://github.com/Apple-Actions/import-codesign-certs). That served us well, but had has a few issues which compounded on self-hosted runners.
+Before, I used [apple-actions/import-codesign-certs](https://github.com/Apple-Actions/import-codesign-certs). That served us well, but had a few issues which compounded when I personally moved to using self-hosted runners.
 
-In general I wanted something:
+I wanted something:
 
 - ⚙️ Well-maintained.
-- ✅ [Tested](https://github.com/sudara/basic-macos-keychain-action/blob/main/.github/workflows/tests.yml).
+- ✅ [Well Tested](https://github.com/sudara/basic-macos-keychain-action/blob/main/.github/workflows/tests.yml).
 - 🧹 Cleans up after itself.
 - 🖥️ Works on self-hosted runners.
 - 🔐 Won't retain or leak sensitive information.
-- 🤝 Provides a named keychain output to use for signing.
-- 🪶 Is a lightweight, [easy to understand composite action](https://github.com/sudara/basic-macos-keychain-action/blob/main/action.yml) (not js/ts).
+- 🤝 Provides a named keychain output to optionally specify for signing.
+- 🧑🏼‍💻 Handles both binary signing (`DEVELOPER_ID_APPLICATION`) and pkg signing (`DEVELOPER_ID_INSTALLER`).
+- 🪶 Is a lightweight and [easy to understand composite action](https://github.com/sudara/basic-macos-keychain-action/blob/main/action.yml) (not js or ts).
 
-This action is very basic. You could just read the action.yml and stick it in your own workflow manually. It's encapsulated here for ease of use, for testing, and to avoid messy additional scripts.
+This action very straightforward. Just a list of commands. Instead of consuming the action, you could also [copy the commands out of action.yml](https://github.com/sudara/basic-macos-keychain-action/blob/main/action.yml#L49-L101) and stick it in your own workflow manually. It's encapsulated for ease of use, for testing, and to avoid messy scripts cluttering up my yaml.
 
 ## Usage
 
-Using this action, you'll need 3 secrets:
+To codesign binaries, you'll need 3 secrets in your workflow file:
 
 1. `DEV_ID_APP_CERT`, the exported cert from Xcode which has then been base64-encoded.
 2. `DEV_ID_APP_PASSWORD`, the password you supplied to Xcode at the time of cert export.
 3. `DEVELOPER_ID_APPLICATION`, the name or the hashed id of the specific cert identity, as found via `security find-identity -v`.
 
-If you also want to sign installers, you will need:
+If you also want to sign macOS pkg installers, you will also need the following:
 
 4. `DEV_ID_INSTALLER_CERT`
 5. `DEV_ID_INSTALLER_PASSWORD`
 6. `DEVELOPER_ID_INSTALLER`
 
-If this sounds confusing, please [read my blog article on macOS codesigning](https://melatonin.dev/blog/how-to-code-sign-and-notarize-macos-audio-plugins-in-ci/):
+For details on how to export those, please [read my blog article on macOS codesigning](https://melatonin.dev/blog/how-to-code-sign-and-notarize-macos-audio-plugins-in-ci/):
 
 Add to any GitHub workflow like so:
 
@@ -49,21 +50,17 @@ Add to any GitHub workflow like so:
     dev-id-installer-password: ${{ secrets.DEV_ID_INSTALLER_PASSWORD }}
 ```
 
-Since the convention on GitHub is that `@v1` is actually moving target, you might want lock to an exact version (understandable).
+> [!NOTE]
+> If you use `@v1`, be aware that it refers to a moving target. You might prefer to lock to an exact tag like `@v1.5.0`.
 
-Pick the latest tag, for example:
 
-```
-  uses: sudara/basic-macos-keychain-action@v1.5.0
-```
-
-On GitHub hosted runners, you would then sign an application or plugin just by referencing the identity:
+After running this action, you can now sign an application / plugin just by referencing the `DEVELOPER_ID_APPLICATION` identity:
 
 ```bash
 codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v "${{ env.ARTIFACT_PATH }}" --deep --strict --options=runtime --timestamp
 ```
 
-And sign a pkg installer by referencing the installer identity:
+And sign a pkg installer by referencing the `DEVELOPER_ID_INSTALLER` identity:
 
 ```bash
   productbuild --synthesize --package "myTemporaryPkg" --distribution distribution.xml --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp
@@ -80,7 +77,7 @@ codesign --force --keychain ${{ steps.keychain.outputs.keychain-path }} -s "${{ 
 > `--keychain` does not stop `codesign` from also finding a same-named cert in your login keychain, so you can still hit `ambiguous (matches multiple identities)`. The reliable fix is to sign by the identity hash, see [Signing with the identity hash](#signing-with-the-identity-hash).
 
 > [!NOTE]
-> The `id` must be present to make use of `steps.keychain.outputs.keychain-path` when signing
+> You must give `basic-macos-keychain-action` an `id` in the workflow to make use of `steps.keychain.outputs.keychain-path`.
 
 ### Signing with the identity hash
 
@@ -124,7 +121,7 @@ The two `*-identity-hash` outputs let you sign against the exact cert this actio
 
 ## How it works
 
-All the logic is in action.yml, so it's easy to follow along.
+All the logic is in action.yml. It's easy to follow along.
 
 - Creates a temporary keychain with a name keyed to the specific job run.
 - Decodes a base64 encoded PKCS12 cert to a temp file.
@@ -148,6 +145,8 @@ In CI, we need to avoid the required user interaction (but remain secure). To ac
 - Only the `codesign` tool can access the keychain. We specify `-T /usr/bin/codesign`.
 - We do _not_ use the `-A` flag when importing the cert via `security import `.
 - We use `security set-key-partition-list,` specifying the temporary keychain password, which lets us use the keychain passwordless, but _only_ with Apple's `codesign` tool.
+
+We do the same for the installer cert and `pkgbuild` and  `productsign`.
 
 ### Security on self-hosted runners
 
@@ -175,7 +174,7 @@ You can view your keychains in your user directory `~/Library/Keychain`. You sho
 
 ## Troubleshooting
 
-### When your self-hosted runner is your local dev machine
+### If your self-hosted runner is your local dev machine
 
 In this case, your certs already live in your login keychain, so the same-named cert now exists twice and `codesign` throws `ambiguous (matches multiple identities)`.
 
