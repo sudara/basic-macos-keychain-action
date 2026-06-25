@@ -95,10 +95,10 @@ codesign --force -s "${{ steps.keychain.outputs.app-identity-hash }}" -v "${{ en
 And for installers:
 
 ```bash
-productbuild --synthesize --package "myTemporaryPkg" --distribution distribution.xml --sign "${{ steps.keychain.outputs.installer-identity-hash }}" --timestamp
+pkgbuild --root "${{ env.PKG_ROOT }}" --identifier com.example.app --sign "${{ steps.keychain.outputs.installer-identity-hash }}" --timestamp output.pkg
 ```
 
-The hash is the fingerprint of the cert itself, so it is stable across runs even though the keychain is recreated each time. You no longer need a `DEVELOPER_ID_APPLICATION` or `DEVELOPER_ID_INSTALLER` secret holding the identity name if you sign this way.
+The hash is the fingerprint of the cert itself, so it is stable across runs even though the keychain is recreated each time. Read it from the action output each run rather than hardcoding it, since it changes if the cert is reissued. Signing this way, you no longer need a `DEVELOPER_ID_APPLICATION` or `DEVELOPER_ID_INSTALLER` secret holding the identity name.
 
 ## Inputs
 

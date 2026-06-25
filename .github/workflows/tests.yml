@@ -203,6 +203,18 @@ jobs:
           set -eo pipefail
           NAME="Developer ID Application: Ambiguity Test (TESTTEAM00)"
           WORK="$(mktemp -d)"
+          KC="$HOME/Library/Keychains/ambiguity-test.keychain-db"
+          ORIG_LIST="$(security list-keychains -d user | xargs)"
+
+          # Restore machine state even if an assertion aborts the step (set -e)
+          cleanup() {
+            security list-keychains -d user -s $ORIG_LIST || true
+            security delete-keychain "$KC" 2>/dev/null || true
+            sudo security remove-trusted-cert -d "$WORK/cA.pem" 2>/dev/null || true
+            sudo security remove-trusted-cert -d "$WORK/cB.pem" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
           printf '[req]\ndistinguished_name=dn\nx509_extensions=ext\nprompt=no\n[dn]\nCN=%s\n[ext]\nkeyUsage=critical,digitalSignature\nextendedKeyUsage=critical,codeSigning\n' "$NAME" > "$WORK/openssl.cnf"
 
           # two DIFFERENT certs (different keys) sharing one identity name
@@ -211,7 +223,6 @@ jobs:
             openssl pkcs12 -export -out "$WORK/$n.p12" -inkey "$WORK/k$n.pem" -in "$WORK/c$n.pem" -passout pass:pw
           done
 
-          KC="$HOME/Library/Keychains/ambiguity-test.keychain-db"
           security create-keychain -p pw "$KC"
           security unlock-keychain -p pw "$KC"
           for n in A B; do
@@ -223,8 +234,8 @@ jobs:
           sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$WORK/cA.pem"
           sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$WORK/cB.pem"
 
-          # codesign resolves -s by the search list, so the keychain must be in it (this is what the action's enable-keychain step does)
-          security list-keychains -d user -s "$KC"
+          # codesign resolves -s by the search list, so add (don't replace) the keychain, like the action's enable-keychain step
+          security list-keychains -d user -s "$KC" $ORIG_LIST
 
           echo "::group::valid codesigning identities"
           security find-identity -v -p codesigning "$KC"
@@ -249,10 +260,6 @@ jobs:
           echo "hash: $HASH"
           codesign --force -s "$HASH" "$VICTIM"
           echo "OK: signing by hash resolved the ambiguity"
-
-      - name: Cleanup
-        if: always()
-        run: security delete-keychain "$HOME/Library/Keychains/ambiguity-test.keychain-db" || true
 
   test-cleanup-after-sign:
     if: ${{ always() }}
