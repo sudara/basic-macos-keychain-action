@@ -84,7 +84,8 @@ runs:
         rm "$DEV_ID_APPLICATION"
 
         # The SHA-1 hash targets this exact cert, sidestepping ambiguity with same-named certs in other keychains
-        APP_IDENTITY_HASH=$(security find-identity -v -p codesigning "${{ steps.setup-keychain.outputs.keychain-path }}" | grep -m1 "Developer ID Application" | awk '{print $2}')
+        # No -v: the temp keychain holds only the leaf cert, so the chain isn't validatable here, but the hash is
+        APP_IDENTITY_HASH=$(security find-identity -p codesigning "${{ steps.setup-keychain.outputs.keychain-path }}" | grep -m1 "Developer ID Application" | awk '{print $2}' || true)
         if [ -z "$APP_IDENTITY_HASH" ]; then
           echo "::warning::Could not determine the Developer ID Application identity hash"
         fi
@@ -104,8 +105,8 @@ runs:
         # Clean up temp files
         rm "$DEV_ID_INSTALLER"
 
-        # Installer certs aren't a codesigning policy, so list all valid identities and pick the installer one
-        INSTALLER_IDENTITY_HASH=$(security find-identity -v "${{ steps.setup-keychain.outputs.keychain-path }}" | grep -m1 "Developer ID Installer" | awk '{print $2}')
+        # Installer certs aren't a codesigning policy, so list all identities and pick the installer one
+        INSTALLER_IDENTITY_HASH=$(security find-identity "${{ steps.setup-keychain.outputs.keychain-path }}" | grep -m1 "Developer ID Installer" | awk '{print $2}' || true)
         if [ -z "$INSTALLER_IDENTITY_HASH" ]; then
           echo "::warning::Could not determine the Developer ID Installer identity hash"
         fi
