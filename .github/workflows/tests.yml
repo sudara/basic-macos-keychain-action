@@ -85,6 +85,15 @@ jobs:
             echo "Keychain created"
           fi
 
+      - name: Check the keychain has no auto-lock timeout
+        run: |
+          INFO="$(security show-keychain-info "${{ steps.import.outputs.keychain-path }}" 2>&1)"
+          echo "$INFO"
+          echo "$INFO" | grep -q "no-timeout" || {
+            echo "::error::keychain should have no auto-lock timeout"
+            exit 1
+          }
+
   test-sign:
     name: TEST Sign
     runs-on: macos-latest

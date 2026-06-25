@@ -66,6 +66,9 @@ runs:
         # Unlock it for use
         security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
+        # Drop the default 5-min auto-lock so a long job can't relock the keychain and hang codesign on a password prompt
+        security set-keychain-settings "$KEYCHAIN_PATH"
+
         # Set output for cleanup
         echo "keychain-path=$KEYCHAIN_PATH" >> $GITHUB_OUTPUT
         echo "keychain-password=$KEYCHAIN_PASSWORD" >> $GITHUB_OUTPUT
