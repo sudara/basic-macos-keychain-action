@@ -5,10 +5,6 @@ name: tests
 on:
   push:
 
-defaults:
-  run:
-    shell: bash
-
 jobs:
   test-no-cert:
     name: TEST inputs ${{ matrix.name }}
@@ -162,6 +158,25 @@ jobs:
           fi
           rm ${{ steps.unsigned.outputs.temp_file }}
 
+      - name: Check app-identity-hash output is a SHA-1 hash
+        run: |
+          if ! [[ "${{ steps.import.outputs.app-identity-hash }}" =~ ^[0-9A-F]{40}$ ]]; then
+            echo "::error::app-identity-hash is not a 40-char hex hash: '${{ steps.import.outputs.app-identity-hash }}'"
+            exit 1
+          fi
+
+      - name: Verify a file signed by identity hash
+        run: |
+          TEMP_FILE=$(mktemp)
+          codesign --force --sign "${{ steps.import.outputs.app-identity-hash }}" $TEMP_FILE -v --deep --strict --options=runtime --timestamp
+          codesign --verify -v $TEMP_FILE
+          if [ $? -ne 0 ]; then
+            echo "Code signing verification failed"
+            rm $TEMP_FILE
+            exit 1
+          fi
+          rm $TEMP_FILE
+
   test-installer-sign:
     name: TEST Installer Sign ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -199,10 +214,26 @@ jobs:
           productbuild --synthesize --package temp.pkg --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp temp-product.pkg
           pkgutil --check-signature temp.pkg
 
+      - name: Check installer-identity-hash output is a SHA-1 hash
+        run: |
+          if ! [[ "${{ steps.import.outputs.installer-identity-hash }}" =~ ^[0-9A-F]{40}$ ]]; then
+            echo "::error::installer-identity-hash is not a 40-char hex hash: '${{ steps.import.outputs.installer-identity-hash }}'"
+            exit 1
+          fi
+
+      - name: Verify a pkg signed by identity hash
+        run: |
+          mkdir -p temp
+          TEMP_FILE=$(mktemp temp/XXXXXX)
+          echo "Hello World" > $TEMP_FILE
+          pkgbuild --root temp --identifier com.example.test --install-location ${{ runner.temp }} --sign "${{ steps.import.outputs.installer-identity-hash }}" --timestamp temp-hash.pkg
+          pkgutil --check-signature temp-hash.pkg
+
       - name: Cleanup
         run: |
           rm temp.pkg
           rm temp-product.pkg
+          rm temp-hash.pkg
 
   test-cleanup-after-sign:
     if: ${{ always() }}

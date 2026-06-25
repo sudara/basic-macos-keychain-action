@@ -27,6 +27,12 @@ outputs:
   keychain-path:
     description: 'Path to the temporary keychain with imported cert'
     value: ${{ steps.setup-keychain.outputs.keychain-path }}
+  app-identity-hash:
+    description: 'SHA-1 hash of the imported Developer ID Application identity. Sign with this to avoid ambiguity when a same-named cert exists in another keychain.'
+    value: ${{ steps.import-app-cert.outputs.app-identity-hash }}
+  installer-identity-hash:
+    description: 'SHA-1 hash of the imported Developer ID Installer identity. Sign with this to avoid ambiguity when a same-named cert exists in another keychain.'
+    value: ${{ steps.import-install-cert.outputs.installer-identity-hash }}
 
 
 runs:
@@ -77,6 +83,13 @@ runs:
         # Clean up temp files
         rm "$DEV_ID_APPLICATION"
 
+        # The SHA-1 hash targets this exact cert, sidestepping ambiguity with same-named certs in other keychains
+        APP_IDENTITY_HASH=$(security find-identity -v -p codesigning "${{ steps.setup-keychain.outputs.keychain-path }}" | grep -m1 "Developer ID Application" | awk '{print $2}')
+        if [ -z "$APP_IDENTITY_HASH" ]; then
+          echo "::warning::Could not determine the Developer ID Application identity hash"
+        fi
+        echo "app-identity-hash=$APP_IDENTITY_HASH" >> $GITHUB_OUTPUT
+
     - id: import-install-cert
       if: inputs.dev-id-installer-cert != ''
       shell: bash
@@ -90,6 +103,13 @@ runs:
 
         # Clean up temp files
         rm "$DEV_ID_INSTALLER"
+
+        # Installer certs aren't a codesigning policy, so list all valid identities and pick the installer one
+        INSTALLER_IDENTITY_HASH=$(security find-identity -v "${{ steps.setup-keychain.outputs.keychain-path }}" | grep -m1 "Developer ID Installer" | awk '{print $2}')
+        if [ -z "$INSTALLER_IDENTITY_HASH" ]; then
+          echo "::warning::Could not determine the Developer ID Installer identity hash"
+        fi
+        echo "installer-identity-hash=$INSTALLER_IDENTITY_HASH" >> $GITHUB_OUTPUT
 
     - id: enable-keychain
       shell: bash
