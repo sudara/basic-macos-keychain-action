@@ -17,7 +17,8 @@ jobs:
           - name: (self-hosted)
             os: self-hosted
     steps:
-      - uses: sudara/basic-macos-keychain-action@main
+      - uses: actions/checkout@v7
+      - uses: ./
         id: import
         continue-on-error: true # assume fail, let us run the upcoming step
         with:
@@ -44,7 +45,8 @@ jobs:
           - name: (self-hosted)
             os: self-hosted
     steps:
-      - uses: sudara/basic-macos-keychain-action@main
+      - uses: actions/checkout@v7
+      - uses: ./
         id: import
         continue-on-error: true # assume fail, let us run the upcoming step
         with:
@@ -90,7 +92,8 @@ jobs:
           - name: (self-hosted)
             os: self-hosted
     steps:
-      - uses: sudara/basic-macos-keychain-action@main
+      - uses: actions/checkout@v7
+      - uses: ./
         id: import
         with:
           dev-id-app-cert: ${{ secrets.DEVELOPER_ID_APP_CERT }}
@@ -124,7 +127,8 @@ jobs:
             os: self-hosted
 
     steps:
-      - uses: sudara/basic-macos-keychain-action@main
+      - uses: actions/checkout@v7
+      - uses: ./
         id: import
         with:
           dev-id-app-cert: ${{ secrets.DEVELOPER_ID_APP_CERT }}
@@ -189,7 +193,8 @@ jobs:
             os: self-hosted
 
     steps:
-      - uses: sudara/basic-macos-keychain-action@main
+      - uses: actions/checkout@v7
+      - uses: ./
         id: import
         with:
           dev-id-app-cert: ${{ secrets.DEVELOPER_ID_APP_CERT }}
