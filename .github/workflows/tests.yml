@@ -223,6 +223,9 @@ jobs:
           sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$WORK/cA.pem"
           sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$WORK/cB.pem"
 
+          # codesign resolves -s by the search list, so the keychain must be in it (this is what the action's enable-keychain step does)
+          security list-keychains -d user -s "$KC"
+
           echo "::group::valid codesigning identities"
           security find-identity -v -p codesigning "$KC"
           echo "::endgroup::"
@@ -235,7 +238,7 @@ jobs:
           VICTIM="$WORK/victim"; cp /bin/ls "$VICTIM"
 
           echo "=== signing by NAME should fail as ambiguous ==="
-          if codesign --force --keychain "$KC" -s "$NAME" "$VICTIM" 2>"$WORK/err.txt"; then
+          if codesign --force -s "$NAME" "$VICTIM" 2>"$WORK/err.txt"; then
             echo "::error::signing by name unexpectedly succeeded"; exit 1
           fi
           cat "$WORK/err.txt"
@@ -244,7 +247,7 @@ jobs:
           echo "=== signing by HASH should succeed (same extraction the action uses) ==="
           HASH="$(security find-identity -p codesigning "$KC" | grep -m1 "$NAME" | awk '{print $2}')"
           echo "hash: $HASH"
-          codesign --force --keychain "$KC" -s "$HASH" "$VICTIM"
+          codesign --force -s "$HASH" "$VICTIM"
           echo "OK: signing by hash resolved the ambiguity"
 
       - name: Cleanup
