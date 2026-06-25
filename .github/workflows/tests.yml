@@ -194,6 +194,63 @@ jobs:
           rm temp-product.pkg
           rm temp-hash.pkg
 
+  test-ambiguity:
+    name: TEST Ambiguity resolved by hash
+    runs-on: macos-latest
+    steps:
+      - name: Two valid same-named certs are ambiguous by name but resolvable by hash
+        run: |
+          set -eo pipefail
+          NAME="Developer ID Application: Ambiguity Test (TESTTEAM00)"
+          WORK="$(mktemp -d)"
+          printf '[req]\ndistinguished_name=dn\nx509_extensions=ext\nprompt=no\n[dn]\nCN=%s\n[ext]\nkeyUsage=critical,digitalSignature\nextendedKeyUsage=critical,codeSigning\n' "$NAME" > "$WORK/openssl.cnf"
+
+          # two DIFFERENT certs (different keys) sharing one identity name
+          for n in A B; do
+            openssl req -x509 -newkey rsa:2048 -nodes -days 1 -keyout "$WORK/k$n.pem" -out "$WORK/c$n.pem" -config "$WORK/openssl.cnf" -extensions ext
+            openssl pkcs12 -export -out "$WORK/$n.p12" -inkey "$WORK/k$n.pem" -in "$WORK/c$n.pem" -passout pass:pw
+          done
+
+          KC="$HOME/Library/Keychains/ambiguity-test.keychain-db"
+          security create-keychain -p pw "$KC"
+          security unlock-keychain -p pw "$KC"
+          for n in A B; do
+            security import "$WORK/$n.p12" -f pkcs12 -k "$KC" -P pw -T /usr/bin/codesign
+          done
+          security set-key-partition-list -S apple-tool:,apple: -s -k pw "$KC" >/dev/null
+
+          # codesign only counts trusted certs as valid identity matches, so anchor both
+          sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$WORK/cA.pem"
+          sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$WORK/cB.pem"
+
+          echo "::group::valid codesigning identities"
+          security find-identity -v -p codesigning "$KC"
+          echo "::endgroup::"
+          COUNT="$(security find-identity -v -p codesigning "$KC" | grep -c "$NAME" || true)"
+          if [ "$COUNT" -lt 2 ]; then
+            echo "::error::expected at least 2 valid same-named identities, got $COUNT"
+            exit 1
+          fi
+
+          VICTIM="$WORK/victim"; cp /bin/ls "$VICTIM"
+
+          echo "=== signing by NAME should fail as ambiguous ==="
+          if codesign --force --keychain "$KC" -s "$NAME" "$VICTIM" 2>"$WORK/err.txt"; then
+            echo "::error::signing by name unexpectedly succeeded"; exit 1
+          fi
+          cat "$WORK/err.txt"
+          grep -q "ambiguous" "$WORK/err.txt" || { echo "::error::expected an 'ambiguous' error"; exit 1; }
+
+          echo "=== signing by HASH should succeed (same extraction the action uses) ==="
+          HASH="$(security find-identity -p codesigning "$KC" | grep -m1 "$NAME" | awk '{print $2}')"
+          echo "hash: $HASH"
+          codesign --force --keychain "$KC" -s "$HASH" "$VICTIM"
+          echo "OK: signing by hash resolved the ambiguity"
+
+      - name: Cleanup
+        if: always()
+        run: security delete-keychain "$HOME/Library/Keychains/ambiguity-test.keychain-db" || true
+
   test-cleanup-after-sign:
     if: ${{ always() }}
     name: TEST post-sign cleanup
