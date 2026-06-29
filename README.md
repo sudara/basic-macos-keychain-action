@@ -63,8 +63,7 @@ codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v "${{ env.ARTIFAC
 And sign a pkg installer by referencing the `DEVELOPER_ID_INSTALLER` identity:
 
 ```bash
-  productbuild --synthesize --package "myTemporaryPkg" --distribution distribution.xml --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp
-
+productsign --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp unsigned.pkg signed.pkg
 ```
 
 On self-hosted runners, your cert often already lives in your login keychain. You can pass the `keychain-path` that this action outputs to point `codesign` at the temporary keychain:
