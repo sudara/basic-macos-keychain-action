@@ -60,7 +60,13 @@ After running this action, you can now sign an application / plugin just by refe
 codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v "${{ env.ARTIFACT_PATH }}" --deep --strict --options=runtime --timestamp
 ```
 
-And sign a pkg installer by referencing the `DEVELOPER_ID_INSTALLER` identity:
+And sign a pkg installer by referencing the `DEVELOPER_ID_INSTALLER` identity. Build and sign a distribution installer in one step with `productbuild`:
+
+```bash
+productbuild --distribution distribution.xml --package-path . --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp output.pkg
+```
+
+Or sign an already-built pkg with `productsign`:
 
 ```bash
 productsign --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp unsigned.pkg signed.pkg
