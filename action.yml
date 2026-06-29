@@ -27,6 +27,12 @@ outputs:
   keychain-path:
     description: 'Path to the temporary keychain with imported cert'
     value: ${{ steps.setup-keychain.outputs.keychain-path }}
+  app-identity-hash:
+    description: 'SHA-1 hash of the imported Developer ID Application identity. Sign with this to avoid ambiguity when a same-named cert exists in another keychain.'
+    value: ${{ steps.import-app-cert.outputs.app-identity-hash }}
+  installer-identity-hash:
+    description: 'SHA-1 hash of the imported Developer ID Installer identity. Sign with this to avoid ambiguity when a same-named cert exists in another keychain.'
+    value: ${{ steps.import-install-cert.outputs.installer-identity-hash }}
 
 
 runs:
@@ -60,6 +66,9 @@ runs:
         # Unlock it for use
         security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
+        # Drop the default 5-min auto-lock so a long job can't relock the keychain and hang codesign on a password prompt
+        security set-keychain-settings "$KEYCHAIN_PATH"
+
         # Set output for cleanup
         echo "keychain-path=$KEYCHAIN_PATH" >> $GITHUB_OUTPUT
         echo "keychain-password=$KEYCHAIN_PASSWORD" >> $GITHUB_OUTPUT
@@ -77,6 +86,14 @@ runs:
         # Clean up temp files
         rm "$DEV_ID_APPLICATION"
 
+        # The SHA-1 hash targets this exact cert, sidestepping ambiguity with same-named certs in other keychains
+        # No -v: the temp keychain holds only the leaf cert, so the chain isn't validatable here, but the hash is
+        APP_IDENTITY_HASH=$(security find-identity -p codesigning "${{ steps.setup-keychain.outputs.keychain-path }}" | grep -m1 "Developer ID Application" | awk '{print $2}' || true)
+        if [ -z "$APP_IDENTITY_HASH" ]; then
+          echo "::warning::Could not determine the Developer ID Application identity hash"
+        fi
+        echo "app-identity-hash=$APP_IDENTITY_HASH" >> $GITHUB_OUTPUT
+
     - id: import-install-cert
       if: inputs.dev-id-installer-cert != ''
       shell: bash
@@ -90,6 +107,13 @@ runs:
 
         # Clean up temp files
         rm "$DEV_ID_INSTALLER"
+
+        # Installer certs aren't a codesigning policy, so list all identities and pick the installer one
+        INSTALLER_IDENTITY_HASH=$(security find-identity "${{ steps.setup-keychain.outputs.keychain-path }}" | grep -m1 "Developer ID Installer" | awk '{print $2}' || true)
+        if [ -z "$INSTALLER_IDENTITY_HASH" ]; then
+          echo "::warning::Could not determine the Developer ID Installer identity hash"
+        fi
+        echo "installer-identity-hash=$INSTALLER_IDENTITY_HASH" >> $GITHUB_OUTPUT
 
     - id: enable-keychain
       shell: bash

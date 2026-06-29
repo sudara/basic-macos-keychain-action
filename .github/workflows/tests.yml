@@ -1,27 +1,15 @@
 name: tests
 
-# IMPORTANT: To remain secure for self-hosted runners
-# We disallow `pull_request` here
 on:
   push:
 
-defaults:
-  run:
-    shell: bash
-
 jobs:
   test-no-cert:
-    name: TEST inputs ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - name: (hosted)
-            os: macos-latest
-          # - name: (self-hosted)
-          #   os: self-hosted
+    name: TEST inputs
+    runs-on: macos-latest
     steps:
-      - uses: sudara/basic-macos-keychain-action@main
+      - uses: actions/checkout@v7
+      - uses: ./
         id: import
         continue-on-error: true # assume fail, let us run the upcoming step
         with:
@@ -38,17 +26,11 @@ jobs:
           fi
 
   test-wrong-password:
-    name: TEST wrong pass ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - name: (hosted)
-            os: macos-latest
-          # - name: (self-hosted)
-          #   os: self-hosted
+    name: TEST wrong pass
+    runs-on: macos-latest
     steps:
-      - uses: sudara/basic-macos-keychain-action@main
+      - uses: actions/checkout@v7
+      - uses: ./
         id: import
         continue-on-error: true # assume fail, let us run the upcoming step
         with:
@@ -65,16 +47,9 @@ jobs:
           fi
 
   test-cleanup-after-fail:
-    name: TEST post-fail cleanup ${{ matrix.name }}
+    name: TEST post-fail cleanup
     needs: [test-wrong-password]
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - name: (hosted)
-            os: macos-latest
-          # - name: (self-hosted)
-          #   os: self-hosted
+    runs-on: macos-latest
     steps:
       - name: Ensure no github-action* keychain exists
         run: |
@@ -84,17 +59,11 @@ jobs:
           fi
 
   test-keychain:
-    name: TEST Keychain create ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - name: (hosted)
-            os: macos-latest
-          # - name: (self-hosted)
-          #   os: self-hosted
+    name: TEST Keychain create
+    runs-on: macos-latest
     steps:
-      - uses: sudara/basic-macos-keychain-action@main
+      - uses: actions/checkout@v7
+      - uses: ./
         id: import
         with:
           dev-id-app-cert: ${{ secrets.DEVELOPER_ID_APP_CERT }}
@@ -116,19 +85,21 @@ jobs:
             echo "Keychain created"
           fi
 
-  test-sign:
-    name: TEST Sign ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - name: (hosted)
-            os: macos-latest
-          # - name: (self-hosted)
-          #   os: self-hosted
+      - name: Check the keychain has no auto-lock timeout
+        run: |
+          INFO="$(security show-keychain-info "${{ steps.import.outputs.keychain-path }}" 2>&1)"
+          echo "$INFO"
+          echo "$INFO" | grep -q "no-timeout" || {
+            echo "::error::keychain should have no auto-lock timeout"
+            exit 1
+          }
 
+  test-sign:
+    name: TEST Sign
+    runs-on: macos-latest
     steps:
-      - uses: sudara/basic-macos-keychain-action@main
+      - uses: actions/checkout@v7
+      - uses: ./
         id: import
         with:
           dev-id-app-cert: ${{ secrets.DEVELOPER_ID_APP_CERT }}
@@ -162,19 +133,31 @@ jobs:
           fi
           rm ${{ steps.unsigned.outputs.temp_file }}
 
-  test-installer-sign:
-    name: TEST Installer Sign ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - name: (hosted)
-            os: macos-latest
-          # - name: (self-hosted)
-          #   os: self-hosted
+      - name: Check app-identity-hash output is a SHA-1 hash
+        run: |
+          if ! [[ "${{ steps.import.outputs.app-identity-hash }}" =~ ^[0-9A-F]{40}$ ]]; then
+            echo "::error::app-identity-hash is not a 40-char hex hash: '${{ steps.import.outputs.app-identity-hash }}'"
+            exit 1
+          fi
 
+      - name: Verify a file signed by identity hash
+        run: |
+          TEMP_FILE=$(mktemp)
+          codesign --force --sign "${{ steps.import.outputs.app-identity-hash }}" $TEMP_FILE -v --deep --strict --options=runtime --timestamp
+          codesign --verify -v $TEMP_FILE
+          if [ $? -ne 0 ]; then
+            echo "Code signing verification failed"
+            rm $TEMP_FILE
+            exit 1
+          fi
+          rm $TEMP_FILE
+
+  test-installer-sign:
+    name: TEST Installer Sign
+    runs-on: macos-latest
     steps:
-      - uses: sudara/basic-macos-keychain-action@main
+      - uses: actions/checkout@v7
+      - uses: ./
         id: import
         with:
           dev-id-app-cert: ${{ secrets.DEVELOPER_ID_APP_CERT }}
@@ -199,23 +182,99 @@ jobs:
           productbuild --synthesize --package temp.pkg --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp temp-product.pkg
           pkgutil --check-signature temp.pkg
 
+      - name: Check installer-identity-hash output is a SHA-1 hash
+        run: |
+          if ! [[ "${{ steps.import.outputs.installer-identity-hash }}" =~ ^[0-9A-F]{40}$ ]]; then
+            echo "::error::installer-identity-hash is not a 40-char hex hash: '${{ steps.import.outputs.installer-identity-hash }}'"
+            exit 1
+          fi
+
+      - name: Verify a pkg signed by identity hash
+        run: |
+          mkdir -p temp
+          TEMP_FILE=$(mktemp temp/XXXXXX)
+          echo "Hello World" > $TEMP_FILE
+          pkgbuild --root temp --identifier com.example.test --install-location ${{ runner.temp }} --sign "${{ steps.import.outputs.installer-identity-hash }}" --timestamp temp-hash.pkg
+          pkgutil --check-signature temp-hash.pkg
+
       - name: Cleanup
         run: |
           rm temp.pkg
           rm temp-product.pkg
+          rm temp-hash.pkg
+
+  test-ambiguity:
+    name: TEST Ambiguity resolved by hash
+    runs-on: macos-latest
+    steps:
+      - name: Two valid same-named certs are ambiguous by name but resolvable by hash
+        run: |
+          set -eo pipefail
+          NAME="Developer ID Application: Ambiguity Test (TESTTEAM00)"
+          WORK="$(mktemp -d)"
+          KC="$HOME/Library/Keychains/ambiguity-test.keychain-db"
+          ORIG_LIST="$(security list-keychains -d user | xargs)"
+
+          # Restore the search list and keychain even if an assertion aborts the step (set -e).
+          # The runner is ephemeral, so the trusted roots we plant below need no removal (and
+          # remove-trusted-cert can hang on an interactive auth prompt in CI).
+          cleanup() {
+            security list-keychains -d user -s $ORIG_LIST || true
+            security delete-keychain "$KC" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          printf '[req]\ndistinguished_name=dn\nx509_extensions=ext\nprompt=no\n[dn]\nCN=%s\n[ext]\nkeyUsage=critical,digitalSignature\nextendedKeyUsage=critical,codeSigning\n' "$NAME" > "$WORK/openssl.cnf"
+
+          # two DIFFERENT certs (different keys) sharing one identity name
+          for n in A B; do
+            openssl req -x509 -newkey rsa:2048 -nodes -days 1 -keyout "$WORK/k$n.pem" -out "$WORK/c$n.pem" -config "$WORK/openssl.cnf" -extensions ext
+            openssl pkcs12 -export -out "$WORK/$n.p12" -inkey "$WORK/k$n.pem" -in "$WORK/c$n.pem" -passout pass:pw
+          done
+
+          security create-keychain -p pw "$KC"
+          security unlock-keychain -p pw "$KC"
+          for n in A B; do
+            security import "$WORK/$n.p12" -f pkcs12 -k "$KC" -P pw -T /usr/bin/codesign
+          done
+          security set-key-partition-list -S apple-tool:,apple: -s -k pw "$KC" >/dev/null
+
+          # codesign only counts trusted certs as valid identity matches, so anchor both
+          sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$WORK/cA.pem"
+          sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$WORK/cB.pem"
+
+          # codesign resolves -s by the search list, so add (don't replace) the keychain, like the action's enable-keychain step
+          security list-keychains -d user -s "$KC" $ORIG_LIST
+
+          echo "::group::valid codesigning identities"
+          security find-identity -v -p codesigning "$KC"
+          echo "::endgroup::"
+          COUNT="$(security find-identity -v -p codesigning "$KC" | grep -c "$NAME" || true)"
+          if [ "$COUNT" -lt 2 ]; then
+            echo "::error::expected at least 2 valid same-named identities, got $COUNT"
+            exit 1
+          fi
+
+          VICTIM="$WORK/victim"; cp /bin/ls "$VICTIM"
+
+          echo "=== signing by NAME should fail as ambiguous ==="
+          if codesign --force -s "$NAME" "$VICTIM" 2>"$WORK/err.txt"; then
+            echo "::error::signing by name unexpectedly succeeded"; exit 1
+          fi
+          cat "$WORK/err.txt"
+          grep -q "ambiguous" "$WORK/err.txt" || { echo "::error::expected an 'ambiguous' error"; exit 1; }
+
+          echo "=== signing by HASH should succeed (same extraction the action uses) ==="
+          HASH="$(security find-identity -p codesigning "$KC" | grep -m1 "$NAME" | awk '{print $2}')"
+          echo "hash: $HASH"
+          codesign --force -s "$HASH" "$VICTIM"
+          echo "OK: signing by hash resolved the ambiguity"
 
   test-cleanup-after-sign:
     if: ${{ always() }}
-    name: TEST post-sign cleanup ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
+    name: TEST post-sign cleanup
+    runs-on: macos-latest
     needs: test-sign
-    strategy:
-      matrix:
-        include:
-          - name: (hosted)
-            os: macos-latest
-          # - name: (self-hosted)
-          #   os: self-hosted
     steps:
       - name: Ensure no github-action* keychain exists
         run: |

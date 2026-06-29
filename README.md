@@ -51,7 +51,7 @@ Add to any GitHub workflow like so:
 ```
 
 > [!NOTE]
-> If you use `@v1`, be aware that it refers to a moving target. You might prefer to lock to an exact tag like `@v1.4.0`.
+> If you use `@v1`, be aware that it refers to a moving target. You might prefer to lock to an exact tag like `@v1.5.0`.
 
 
 After running this action, you can now sign an application / plugin just by referencing the `DEVELOPER_ID_APPLICATION` identity:
@@ -60,21 +60,47 @@ After running this action, you can now sign an application / plugin just by refe
 codesign --force -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v "${{ env.ARTIFACT_PATH }}" --deep --strict --options=runtime --timestamp
 ```
 
-And sign a pkg installer by referencing the `DEVELOPER_ID_INSTALLER` identity:
+And sign a pkg installer by referencing the `DEVELOPER_ID_INSTALLER` identity. Build and sign a distribution installer in one step with `productbuild`:
 
 ```bash
-  productbuild --synthesize --package "myTemporaryPkg" --distribution distribution.xml --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp
-
+productbuild --distribution distribution.xml --package-path . --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp output.pkg
 ```
 
-On self-hosted runners, you may want to to provide the `keychain-path`  this action outputs. This will help differentiate it from the local keychains:
+Or sign an already-built pkg with `productsign`:
+
+```bash
+productsign --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp unsigned.pkg signed.pkg
+```
+
+On self-hosted runners, your cert often already lives in your login keychain. You can pass the `keychain-path` that this action outputs to point `codesign` at the temporary keychain:
 
 ```bash
 codesign --force --keychain ${{ steps.keychain.outputs.keychain-path }} -s "${{ secrets.DEVELOPER_ID_APPLICATION}}" -v "${{ env.ARTIFACT_PATH }}" --deep --strict --options=runtime --timestamp
 ```
 
+> [!WARNING]
+> `--keychain` does not stop `codesign` from also finding a same-named cert in your login keychain, so you can still hit `ambiguous (matches multiple identities)`. The reliable fix is to sign by the identity hash, see [Signing with the identity hash](#signing-with-the-identity-hash).
+
 > [!NOTE]
 > You must give `basic-macos-keychain-action` an `id` in the workflow to make use of `steps.keychain.outputs.keychain-path`.
+
+### Signing with the identity hash
+
+When the same cert already exists in another keychain (very common on self-hosted runners where it lives in your login keychain), `codesign` can find two identities with the same friendly name and bail out with `ambiguous (matches multiple identities)`.
+
+Passing `--keychain` narrows the search, but the most robust fix is to sign against the cert's SHA-1 hash, which points at one exact certificate. This action exposes that hash for you:
+
+```bash
+codesign --force -s "${{ steps.keychain.outputs.app-identity-hash }}" -v "${{ env.ARTIFACT_PATH }}" --deep --strict --options=runtime --timestamp
+```
+
+And for installers:
+
+```bash
+pkgbuild --root "${{ env.PKG_ROOT }}" --identifier com.example.app --sign "${{ steps.keychain.outputs.installer-identity-hash }}" --timestamp output.pkg
+```
+
+The hash is the fingerprint of the cert itself, so it is stable across runs even though the keychain is recreated each time. Read it from the action output each run rather than hardcoding it, since it changes if the cert is reissued. Signing this way, you no longer need a `DEVELOPER_ID_APPLICATION` or `DEVELOPER_ID_INSTALLER` secret holding the identity name.
 
 ## Inputs
 
@@ -88,11 +114,15 @@ codesign --force --keychain ${{ steps.keychain.outputs.keychain-path }} -s "${{ 
 
 ## Outputs
 
-| Output          | Description                                       |
-| --------------- | ------------------------------------------------- |
-| `keychain-path` | Path to the temporary keychain with imported cert |
+| Output                    | Description                                                 |
+| ------------------------- | ----------------------------------------------------------- |
+| `keychain-path`           | Path to the temporary keychain with imported cert           |
+| `app-identity-hash`       | SHA-1 hash of the imported Developer ID Application identity |
+| `installer-identity-hash` | SHA-1 hash of the imported Developer ID Installer identity   |
 
-This path can specified for signing and is later used for cleanup.
+`keychain-path` can be specified for signing and is later used for cleanup.
+
+The two `*-identity-hash` outputs let you sign against the exact cert this action imported, instead of the friendly identity name. This sidesteps the dreaded `ambiguous (matches multiple identities)` error you hit when a same-named cert already lives in another keychain, which is common on self-hosted runners. See [Signing with the identity hash](#signing-with-the-identity-hash).
 
 ## How it works
 
@@ -151,13 +181,15 @@ You can view your keychains in your user directory `~/Library/Keychain`. You sho
 
 ### If your self-hosted runner is your local dev machine
 
-In this case, your certs likely already live in your local keychain.
+In this case, your certs already live in your login keychain, so the same-named cert now exists twice and `codesign` throws `ambiguous (matches multiple identities)`.
 
-To avoid dreaded "ambiguous" errors when using `codesign`, be sure to always specify the keychain you want to use when codesigning:
+Specifying `--keychain` is not enough on its own, since `codesign` still consults your login keychain and finds the duplicate. The reliable fix is to sign against the identity hash, which targets one exact cert:
 
 ```bash
-codesign --force --keychain ${{ steps.keychain.outputs.keychain-path }} # rest of command
+codesign --force -s "${{ steps.keychain.outputs.app-identity-hash }}" # rest of command
 ```
+
+See [Signing with the identity hash](#signing-with-the-identity-hash).
 
 > [!NOTE]
 > You must have provided an `id:` for the action (here it's `keychain`) to use the output, see Usage
@@ -177,10 +209,10 @@ If you are still having problems, open an issue.
 Putting this here to remember :)
 
 ```
-git tag -a v1.4.0 -m "Releasing 1.4.0"
+git tag -a v1.5.0 -m "Releasing 1.5.0"
 git push origin main --tags
 
 # Update the @v1
-git tag -f v1 v1.3.0
+git tag -f v1 v1.5.0
 git push -f origin v1
 ```
